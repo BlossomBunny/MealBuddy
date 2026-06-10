@@ -4,7 +4,8 @@ import Link from "next/link";
 
 export default async function HomePage() {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase
@@ -73,7 +74,7 @@ export default async function HomePage() {
             <div className="font-bold">Update ingredients</div>
             <div className="text-sm text-gray-500">Track what&apos;s in your fridge & pantry</div>
           </div>
-          <div className="ml-auto text-purple-700 text-xl">›</div>
+          <div className="ml-auto text-purple-300 text-xl">›</div>
         </Link>
         <Link href="/recipes" className="card p-4 flex items-center gap-4 active:scale-98 transition-transform">
           <div className="text-4xl">🍳</div>
@@ -81,7 +82,7 @@ export default async function HomePage() {
             <div className="font-bold">Find a meal</div>
             <div className="text-sm text-gray-500">Browse recipes or get an AI surprise</div>
           </div>
-          <div className="ml-auto text-purple-700 text-xl">›</div>
+          <div className="ml-auto text-purple-300 text-xl">›</div>
         </Link>
         <Link href="/shopping" className="card p-4 flex items-center gap-4 active:scale-98 transition-transform">
           <div className="text-4xl">🛒</div>
@@ -89,7 +90,7 @@ export default async function HomePage() {
             <div className="font-bold">Shopping list</div>
             <div className="text-sm text-gray-500">Plan your next supermarket run</div>
           </div>
-          <div className="ml-auto text-purple-700 text-xl">›</div>
+          <div className="ml-auto text-purple-300 text-xl">›</div>
         </Link>
       </div>
 
@@ -100,7 +101,7 @@ export default async function HomePage() {
           <div className="font-bold text-sm">Invite your family</div>
           <div className="text-xs text-gray-600 mt-0.5">
             Share the invite code from{" "}
-            <Link href="/family" className="text-purple-600 font-bold underline">
+            <Link href="/family" className="text-purple-700 font-bold underline">
               Family settings
             </Link>{" "}
             so everyone can pitch in!
