@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -19,34 +17,45 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-              if (error) throw error;
+        // 1. Create account
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (signUpError) throw signUpError;
 
-                    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-                          if (signInError) {
-                                  toast.success("Account created! Check your email to confirm, then sign in.");
-                                          setIsSignUp(false);
-                                                  return;
-                                                        }
+        // 2. Sign in immediately (email confirmation is off)
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) {
+          toast.success("Account created! Please sign in.");
+          setIsSignUp(false);
+          return;
+        }
 
-                                                              if (data.user) {
-                                                                      await supabase.from("profiles").upsert(
-                                                                                { id: data.user.id, display_name: displayName.trim() || email.split("@")[0] },
-                                                                                          { onConflict: "id" }
-                                                                                                  );
-                                                                                                        }
+        // 3. Save profile
+        if (signUpData.user) {
+          await supabase.from("profiles").upsert(
+            {
+              id: signUpData.user.id,
+              display_name: displayName.trim() || email.split("@")[0],
+            },
+            { onConflict: "id" }
+          );
+        }
 
-                                                                                                              toast.success("Welcome to MealBuddy!");
-                                                                                                                    router.push("/family");
-                                                                                                                          router.refresh();
+        toast.success("Welcome to MealBuddy! 🎉");
+        // Full reload so server components pick up the new session cookie
+        window.location.href = "/family";
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        router.push("/");
-        router.refresh();
+        window.location.href = "/";
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
