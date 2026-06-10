@@ -100,9 +100,6 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                     <span className={`text-xs font-bold ${pct >= 80 ? "text-green-500" : pct >= 50 ? "text-orange-400" : "text-gray-400"}`}>
                       {pct}% ingredients ✓
                     </span>
-                    {recipe.is_ai_generated && (
-                      <span className="badge bg-purple-100 text-purple-600 text-xs">✨ AI</span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -124,7 +121,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
           <div className="text-center py-10 text-gray-400">
             <div className="text-5xl mb-3">🤷</div>
             <p className="font-semibold">No matching recipes</p>
-            <p className="text-sm mt-1">Try adding more ingredients or hit Surprise Me!</p>
+            <p className="text-sm mt-1">Try adding more ingredients to see more recipes!</p>
           </div>
         )}
       </div>
@@ -200,7 +197,6 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-orange-500 z-50 flex flex-col p-6"
           >
-            {/* Progress bar */}
             <div className="h-1.5 bg-orange-400 rounded-full mb-6">
               <div
                 className="h-full bg-white rounded-full transition-all duration-500"
@@ -209,10 +205,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
             </div>
 
             <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={() => { setCookingStep(null); }}
-                className="text-orange-200 font-bold"
-              >
+              <button onClick={() => { setCookingStep(null); }} className="text-orange-200 font-bold">
                 ← Back
               </button>
               <span className="text-white font-bold opacity-80">
