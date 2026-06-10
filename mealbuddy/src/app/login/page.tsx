@@ -51,10 +51,10 @@ export default function LoginPage() {
       <div className="text-center mb-8">
         <div className="text-7xl mb-3 animate-bounce-slow">🍽️</div>
         <h1 className="text-4xl font-display font-black text-white">
-          Family Meals
+          Meal Buddy
         </h1>
         <p className="text-purple-100 mt-1 font-medium">
-          Cook together. Eat together. ❤️
+          Shop smarter. Eat Better. ❤️
         </p>
       </div>
 
