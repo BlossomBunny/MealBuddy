@@ -19,13 +19,26 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { display_name: displayName } },
-        });
-        if (error) throw error;
-        toast.success("Account created! Check your email to confirm. 🎉");
+        const { data, error } = await supabase.auth.signUp({ email, password });
+              if (error) throw error;
+
+                    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+                          if (signInError) {
+                                  toast.success("Account created! Check your email to confirm, then sign in.");
+                                          setIsSignUp(false);
+                                                  return;
+                                                        }
+
+                                                              if (data.user) {
+                                                                      await supabase.from("profiles").upsert(
+                                                                                { id: data.user.id, display_name: displayName.trim() || email.split("@")[0] },
+                                                                                          { onConflict: "id" }
+                                                                                                  );
+                                                                                                        }
+
+                                                                                                              toast.success("Welcome to MealBuddy!");
+                                                                                                                    router.push("/family");
+                                                                                                                          router.refresh();
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
