@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const publicRoutes = ["/login", "/signup", "/auth/callback"];
+  const publicRoutes = ["/login", "/signup", "/auth/callback", "/api/auth"];
   const isPublic = publicRoutes.some((r) =>
     request.nextUrl.pathname.startsWith(r)
   );
