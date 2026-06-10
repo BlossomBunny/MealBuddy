@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -10,51 +9,34 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
       if (isSignUp) {
-        // 1. Create account
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
+        const res = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, displayName }),
         });
-        if (signUpError) throw signUpError;
-
-        // 2. Sign in immediately (email confirmation is off)
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (data.needsSignIn) {
           toast.success("Account created! Please sign in.");
           setIsSignUp(false);
           return;
         }
-
-        // 3. Save profile
-        if (signUpData.user) {
-          await supabase.from("profiles").upsert(
-            {
-              id: signUpData.user.id,
-              display_name: displayName.trim() || email.split("@")[0],
-            },
-            { onConflict: "id" }
-          );
-        }
-
         toast.success("Welcome to MealBuddy! 🎉");
-        // Full reload so server components pick up the new session cookie
         window.location.href = "/family";
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
         });
-        if (error) throw error;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
         window.location.href = "/";
       }
     } catch (err: unknown) {
