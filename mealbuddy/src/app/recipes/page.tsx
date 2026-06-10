@@ -4,7 +4,8 @@ import RecipesClient from "./RecipesClient";
 
 export default async function RecipesPage() {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase
