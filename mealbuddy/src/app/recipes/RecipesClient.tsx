@@ -69,7 +69,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
             key={v}
             onClick={() => setFilter(v)}
             className={`flex-1 py-2 rounded-xl font-bold text-sm transition-all ${
-              filter === v ? "bg-orange-500 text-white" : "bg-white text-gray-500 border-2 border-gray-100"
+              filter === v ? "bg-purple-600 text-white" : "bg-white text-gray-500 border-2 border-gray-100"
             }`}
           >
             {label}
@@ -97,7 +97,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
                     <span className="text-xs text-gray-400">⏱ {(recipe.prep_time_mins ?? 0) + (recipe.cook_time_mins ?? 0)} min</span>
                     <span className="text-xs text-gray-400">👥 {recipe.servings}</span>
-                    <span className={`text-xs font-bold ${pct >= 80 ? "text-green-500" : pct >= 50 ? "text-orange-400" : "text-gray-400"}`}>
+                    <span className={`text-xs font-bold ${pct >= 80 ? "text-green-500" : pct >= 50 ? "text-teal-500" : "text-gray-400"}`}>
                       {pct}% ingredients ✓
                     </span>
                   </div>
@@ -195,9 +195,9 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
         {selectedRecipe && cookingStep !== null && !showRating && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-orange-500 z-50 flex flex-col p-6"
+            className="fixed inset-0 bg-purple-600 z-50 flex flex-col p-6"
           >
-            <div className="h-1.5 bg-orange-400 rounded-full mb-6">
+            <div className="h-1.5 text-teal-500 rounded-full mb-6">
               <div
                 className="h-full bg-white rounded-full transition-all duration-500"
                 style={{ width: `${((cookingStep + 1) / steps.length) * 100}%` }}
@@ -205,7 +205,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
             </div>
 
             <div className="flex items-center justify-between mb-6">
-              <button onClick={() => { setCookingStep(null); }} className="text-orange-200 font-bold">
+              <button onClick={() => { setCookingStep(null); }} className="text-purple-200 font-bold">
                 ← Back
               </button>
               <span className="text-white font-bold opacity-80">
@@ -228,7 +228,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                 </div>
                 {steps[cookingStep]?.tip && (
                   <div className="bg-white/10 rounded-xl p-4">
-                    <p className="text-orange-100 text-sm">
+                    <p className="text-purple-100 text-sm">
                       💡 <strong>Tip:</strong> {steps[cookingStep].tip}
                     </p>
                   </div>
@@ -240,14 +240,14 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
               {cookingStep < steps.length - 1 ? (
                 <button
                   onClick={() => setCookingStep((s) => (s ?? 0) + 1)}
-                  className="bg-white text-orange-500 font-display font-black text-xl w-full py-4 rounded-2xl shadow-lg"
+                  className="bg-white text-purple-600 font-display font-black text-xl w-full py-4 rounded-2xl shadow-lg"
                 >
                   Next step →
                 </button>
               ) : (
                 <button
                   onClick={() => setShowRating(true)}
-                  className="bg-white text-orange-500 font-display font-black text-xl w-full py-4 rounded-2xl shadow-lg"
+                  className="bg-white text-purple-600 font-display font-black text-xl w-full py-4 rounded-2xl shadow-lg"
                 >
                   🎉 I cooked it!
                 </button>

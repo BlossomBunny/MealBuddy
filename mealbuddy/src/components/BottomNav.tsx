@@ -25,17 +25,17 @@ export default function BottomNav() {
             key={href}
             href={href}
             className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors ${
-              active ? "text-orange-500" : "text-gray-400 hover:text-gray-600"
+              active ? "text-purple-600" : "text-gray-400 hover:text-gray-600"
             }`}
           >
             <span className={`text-xl transition-transform ${active ? "scale-110" : ""}`}>
               {emoji}
             </span>
-            <span className={`text-[10px] font-bold ${active ? "text-orange-500" : ""}`}>
+            <span className={`text-[10px] font-bold ${active ? "text-purple-600" : ""}`}>
               {label}
             </span>
             {active && (
-              <span className="absolute bottom-0 w-8 h-0.5 bg-orange-500 rounded-full" />
+              <span className="absolute bottom-0 w-8 h-0.5 bg-purple-600 rounded-full" />
             )}
           </Link>
         );

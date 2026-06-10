@@ -88,11 +88,11 @@ export default function FamilySetupClient({
           <div className="text-5xl mb-3">👨‍👩‍👧‍👦</div>
           <h1 className="text-2xl font-display font-black">{family.name}</h1>
           <p className="text-gray-500 mt-1 text-sm">Your family group</p>
-          <div className="mt-5 bg-orange-50 rounded-xl p-4">
+          <div className="mt-5 bg-purple-50 rounded-xl p-4">
             <p className="text-sm font-semibold text-gray-500 mb-1">
               Invite code — share with family!
             </p>
-            <p className="text-3xl font-display font-black tracking-widest text-orange-500">
+            <p className="text-3xl font-display font-black tracking-widest text-purple-600">
               {family.invite_code}
             </p>
           </div>
@@ -130,8 +130,8 @@ export default function FamilySetupClient({
               onClick={() => setAvatar(a)}
               className={`text-2xl p-2 rounded-xl transition-all ${
                 avatar === a
-                  ? "bg-orange-500 scale-110 shadow-md"
-                  : "bg-orange-50 hover:bg-orange-100"
+                  ? "bg-purple-600 scale-110 shadow-md"
+                  : "bg-purple-50 hover:bg-purple-100"
               }`}
             >
               {a}
@@ -146,7 +146,7 @@ export default function FamilySetupClient({
           onClick={() => setTab("create")}
           className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
             tab === "create"
-              ? "bg-orange-500 text-white shadow-sm"
+              ? "bg-purple-600 text-white shadow-sm"
               : "bg-white text-gray-500 border-2 border-gray-100"
           }`}
         >
@@ -156,7 +156,7 @@ export default function FamilySetupClient({
           onClick={() => setTab("join")}
           className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
             tab === "join"
-              ? "bg-orange-500 text-white shadow-sm"
+              ? "bg-purple-600 text-white shadow-sm"
               : "bg-white text-gray-500 border-2 border-gray-100"
           }`}
         >

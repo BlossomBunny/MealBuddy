@@ -92,13 +92,13 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
       {/* Add item input */}
       <div className="card p-3 flex gap-2">
         <input
-          className="w-14 text-2xl text-center border-2 border-orange-100 rounded-xl focus:border-orange-400 focus:outline-none"
+          className="w-14 text-2xl text-center border-2 border-purple-100 rounded-xl focus:border-purple-400 focus:outline-none"
           value={newEmoji}
           onChange={(e) => setNewEmoji(e.target.value)}
           placeholder="🛒"
         />
         <input
-          className="flex-1 border-2 border-orange-100 rounded-xl px-3 py-2 focus:border-orange-400 focus:outline-none font-medium"
+          className="flex-1 border-2 border-purple-100 rounded-xl px-3 py-2 focus:border-purple-400 focus:outline-none font-medium"
           placeholder="Add an item…"
           value={newItem}
           onChange={(e) => setNewItem(e.target.value)}
@@ -119,7 +119,7 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
           <button
             key={name}
             onClick={() => addItem(name, emoji)}
-            className="flex-shrink-0 bg-white border-2 border-orange-100 rounded-xl px-3 py-1.5 text-sm font-semibold flex items-center gap-1.5 hover:bg-orange-50 transition-colors"
+            className="flex-shrink-0 bg-white border-2 border-purple-100 rounded-xl px-3 py-1.5 text-sm font-semibold flex items-center gap-1.5 hover:bg-purple-50 transition-colors"
           >
             {emoji} {name}
           </button>
@@ -150,7 +150,7 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
                     <button
                       onClick={() => toggleItem(item.id, true)}
                       disabled={loading === item.id}
-                      className="w-6 h-6 rounded-full border-2 border-orange-300 flex-shrink-0 transition-all hover:border-orange-500"
+                      className="w-6 h-6 rounded-full border-2 border-purple-700 flex-shrink-0 transition-all hover:border-purple-500"
                     />
                     <span className="text-2xl">{item.emoji}</span>
                     <span className="flex-1 font-medium">{item.name}</span>
@@ -184,7 +184,7 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
                   >
                     <button
                       onClick={() => toggleItem(item.id, false)}
-                      className="w-6 h-6 rounded-full bg-orange-400 flex-shrink-0 flex items-center justify-center text-white text-xs"
+                      className="w-6 h-6 rounded-full text-teal-500 flex-shrink-0 flex items-center justify-center text-white text-xs"
                     >
                       ✓
                     </button>

@@ -125,7 +125,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
         <button
           onClick={() => setActiveCategory("all")}
           className={`flex-shrink-0 badge transition-all ${
-            activeCategory === "all" ? "bg-orange-500 text-white" : "bg-white text-gray-600 border border-gray-200"
+            activeCategory === "all" ? "bg-purple-600 text-white" : "bg-white text-gray-600 border border-gray-200"
           }`}
         >
           All
@@ -135,7 +135,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
             key={c.value}
             onClick={() => setActiveCategory(c.value)}
             className={`flex-shrink-0 badge transition-all ${
-              activeCategory === c.value ? "bg-orange-500 text-white" : "bg-white text-gray-600 border border-gray-200"
+              activeCategory === c.value ? "bg-purple-600 text-white" : "bg-white text-gray-600 border border-gray-200"
             }`}
           >
             {c.emoji} {c.label}
@@ -244,7 +244,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
                     key={e}
                     onClick={() => setForm({ ...form, emoji: e })}
                     className={`text-xl flex-shrink-0 p-1.5 rounded-lg transition-all ${
-                      form.emoji === e ? "bg-orange-100 scale-110" : "hover:bg-gray-100"
+                      form.emoji === e ? "bg-purple-100 scale-110" : "hover:bg-gray-100"
                     }`}
                   >
                     {e}
@@ -261,7 +261,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
                       key={c.value}
                       onClick={() => setForm({ ...form, category: c.value, emoji: EMOJI_SUGGESTIONS[c.value]?.[0] ?? form.emoji })}
                       className={`badge transition-all text-sm ${
-                        form.category === c.value ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600"
+                        form.category === c.value ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600"
                       }`}
                     >
                       {c.emoji} {c.label}

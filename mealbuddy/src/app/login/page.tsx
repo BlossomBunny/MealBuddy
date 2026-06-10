@@ -43,13 +43,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-400 to-orange-500 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-b from-violet-500 to-purple-700 flex flex-col items-center justify-center p-6">
       <div className="text-center mb-8">
         <div className="text-7xl mb-3 animate-bounce-slow">🍽️</div>
         <h1 className="text-4xl font-display font-black text-white">
           Family Meals
         </h1>
-        <p className="text-orange-100 mt-1 font-medium">
+        <p className="text-purple-100 mt-1 font-medium">
           Cook together. Eat together. ❤️
         </p>
       </div>
@@ -111,7 +111,7 @@ export default function LoginPage() {
           {isSignUp ? "Already have an account?" : "New here?"}{" "}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-orange-500 font-bold underline"
+            className="text-purple-600 font-bold underline"
           >
             {isSignUp ? "Sign in" : "Create account"}
           </button>

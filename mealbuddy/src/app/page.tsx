@@ -37,7 +37,7 @@ export default async function HomePage() {
     <div className="p-5 space-y-5">
       {/* Header */}
       <div className="pt-6 pb-2">
-        <p className="text-orange-500 font-semibold">{greeting} 👋</p>
+        <p className="text-purple-600 font-semibold">{greeting} 👋</p>
         <h1 className="text-3xl font-display font-black mt-0.5">
           {profile.display_name ?? "Chef"}
         </h1>
@@ -50,14 +50,14 @@ export default async function HomePage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="card p-4 text-center">
           <div className="text-3xl mb-1">🥘</div>
-          <div className="text-2xl font-display font-black text-orange-500">
+          <div className="text-2xl font-display font-black text-purple-600">
             {mealsCooked}
           </div>
           <div className="text-xs text-gray-500 font-medium">meals cooked</div>
         </div>
         <div className="card p-4 text-center">
           <div className="text-3xl mb-1">🥦</div>
-          <div className="text-2xl font-display font-black text-orange-500">
+          <div className="text-2xl font-display font-black text-purple-600">
             {ingredientCount}
           </div>
           <div className="text-xs text-gray-500 font-medium">in the fridge</div>
@@ -73,7 +73,7 @@ export default async function HomePage() {
             <div className="font-bold">Update ingredients</div>
             <div className="text-sm text-gray-500">Track what&apos;s in your fridge & pantry</div>
           </div>
-          <div className="ml-auto text-orange-300 text-xl">›</div>
+          <div className="ml-auto text-purple-700 text-xl">›</div>
         </Link>
         <Link href="/recipes" className="card p-4 flex items-center gap-4 active:scale-98 transition-transform">
           <div className="text-4xl">🍳</div>
@@ -81,7 +81,7 @@ export default async function HomePage() {
             <div className="font-bold">Find a meal</div>
             <div className="text-sm text-gray-500">Browse recipes or get an AI surprise</div>
           </div>
-          <div className="ml-auto text-orange-300 text-xl">›</div>
+          <div className="ml-auto text-purple-700 text-xl">›</div>
         </Link>
         <Link href="/shopping" className="card p-4 flex items-center gap-4 active:scale-98 transition-transform">
           <div className="text-4xl">🛒</div>
@@ -89,18 +89,18 @@ export default async function HomePage() {
             <div className="font-bold">Shopping list</div>
             <div className="text-sm text-gray-500">Plan your next supermarket run</div>
           </div>
-          <div className="ml-auto text-orange-300 text-xl">›</div>
+          <div className="ml-auto text-purple-700 text-xl">›</div>
         </Link>
       </div>
 
       {/* Invite hint */}
-      <div className="bg-orange-100 rounded-2xl p-4 flex items-start gap-3">
+      <div className="bg-purple-100 rounded-2xl p-4 flex items-start gap-3">
         <div className="text-2xl">👨‍👩‍👧‍👦</div>
         <div>
           <div className="font-bold text-sm">Invite your family</div>
           <div className="text-xs text-gray-600 mt-0.5">
             Share the invite code from{" "}
-            <Link href="/family" className="text-orange-600 font-bold underline">
+            <Link href="/family" className="text-purple-600 font-bold underline">
               Family settings
             </Link>{" "}
             so everyone can pitch in!
