@@ -69,10 +69,10 @@ export default function LoginPage() {
       <div className="text-center mb-8">
         <div className="text-7xl mb-3 animate-bounce-slow">🍽️</div>
         <h1 className="text-4xl font-display font-black text-white">
-          Meal Buddy
+          Family Meals
         </h1>
         <p className="text-purple-100 mt-1 font-medium">
-          Shop smarter. Eat Better. ❤️
+          Cook together. Eat together. ❤️
         </p>
       </div>
 
