@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
-import type { Recipe, RecipeStep } from "@/lib/types";
+import type { Recipe } from "@/lib/types";
 import confetti from "canvas-confetti";
 
 interface Props {
@@ -22,11 +22,10 @@ function matchScore(recipe: Recipe, owned: string[]): number {
 
 export default function RecipesClient({ initialRecipes, ownedIngredientNames, familyId, userId }: Props) {
   const supabase = createClient();
-  const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
+  const [recipes] = useState<Recipe[]>(initialRecipes);
   const [filter, setFilter] = useState<"all" | "can-make">("all");
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [cookingStep, setCookingStep] = useState<number | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
   const [showRating, setShowRating] = useState(false);
 
   const sorted = [...recipes].sort((a, b) => {
@@ -38,40 +37,6 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
   const filtered = filter === "can-make"
     ? sorted.filter((r) => matchScore(r, ownedIngredientNames) >= 0.5)
     : sorted;
-
-  async function surpriseMe() {
-    if (ownedIngredientNames.length === 0) {
-      toast.error("Add some ingredients first! 🥦");
-      return;
-    }
-    setAiLoading(true);
-    try {
-      const res = await fetch("/api/ai-recipe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients: ownedIngredientNames }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      const recipe = data.recipe as Recipe;
-      // Save to DB for the family
-      const { data: saved, error } = await supabase
-        .from("recipes")
-        .insert({ ...recipe, family_id: familyId })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setRecipes((prev) => [saved, ...prev]);
-      setSelectedRecipe(saved);
-      toast.success("✨ AI recipe created!");
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Couldn't generate recipe");
-    } finally {
-      setAiLoading(false);
-    }
-  }
 
   async function logCook(recipeId: string, recipeTitle: string, rating: number) {
     await supabase.from("cook_log").insert({
@@ -96,22 +61,6 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
         <h1 className="text-2xl font-display font-black">🍳 Recipes</h1>
         <p className="text-sm text-gray-500 mt-0.5">{recipes.length} recipes available</p>
       </div>
-
-      {/* Surprise Me button */}
-      <motion.button
-        onClick={surpriseMe}
-        disabled={aiLoading}
-        whileTap={{ scale: 0.97 }}
-        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-display font-black text-lg py-4 rounded-2xl shadow-md flex items-center justify-center gap-2"
-      >
-        {aiLoading ? (
-          <>
-            <span className="animate-spin">🌀</span> Cooking up something amazing…
-          </>
-        ) : (
-          <>✨ Surprise me with AI!</>
-        )}
-      </motion.button>
 
       {/* Filter tabs */}
       <div className="flex gap-2">
