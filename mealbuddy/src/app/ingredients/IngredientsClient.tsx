@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,6 +69,34 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
     setShowAdd(false);
     toast.success(`${form.emoji} ${form.name} added!`);
   }
+
+  // Live-sync ingredients across devices/family members
+  useEffect(() => {
+    const channel = supabase
+      .channel(`ingredients_${familyId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ingredients", filter: `family_id=eq.${familyId}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newItem = payload.new as Ingredient;
+            setIngredients((prev) => (prev.some((i) => i.id === newItem.id) ? prev : [...prev, newItem]));
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as Ingredient;
+            setIngredients((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+          } else if (payload.eventType === "DELETE") {
+            const removedId = (payload.old as { id: string }).id;
+            setIngredients((prev) => prev.filter((i) => i.id !== removedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyId]);
 
   async function deleteIngredient(id: string, name: string, emoji: string) {
     const { error } = await supabase.from("ingredients").delete().eq("id", id);
@@ -224,7 +252,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
               {/* Emoji & name row */}
               <div className="flex gap-3">
                 <input
-                  className="input w-20 text-2xl text-center"
+                  className="input !w-20 flex-shrink-0 text-2xl text-center"
                   value={form.emoji}
                   onChange={(e) => setForm({ ...form, emoji: e.target.value })}
                 />
