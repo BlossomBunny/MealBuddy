@@ -27,6 +27,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [cookingStep, setCookingStep] = useState<number | null>(null);
   const [showRating, setShowRating] = useState(false);
+  const [surpriseRecipe, setSurpriseRecipe] = useState<Recipe | null>(null);
 
   const sorted = [...recipes].sort((a, b) => {
     const sa = matchScore(a, ownedIngredientNames);
@@ -55,12 +56,33 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
 
   const steps = selectedRecipe?.steps ?? [];
 
+  function pickSurprise() {
+    const pool = filtered.length ? filtered : recipes;
+    if (!pool.length) return;
+    let pick = pool[Math.floor(Math.random() * pool.length)];
+    // Try to avoid showing the exact same recipe twice in a row, if there's a choice
+    if (pool.length > 1 && surpriseRecipe && pick.id === surpriseRecipe.id) {
+      const others = pool.filter((r) => r.id !== surpriseRecipe.id);
+      pick = others[Math.floor(Math.random() * others.length)];
+    }
+    setSurpriseRecipe(pick);
+  }
+
   return (
     <div className="p-5 space-y-4">
       <div className="pt-4">
         <h1 className="text-2xl font-display font-black">🍳 Recipes</h1>
         <p className="text-sm text-gray-500 mt-0.5">{recipes.length} recipes available</p>
       </div>
+
+      {/* Surprise me button */}
+      <button
+        onClick={pickSurprise}
+        className="w-full py-3.5 rounded-2xl font-display font-black text-lg text-white shadow-lg active:scale-98 transition-transform"
+        style={{ background: "linear-gradient(135deg, #9333ea, #14b8a6)" }}
+      >
+        🎲 Surprise me!
+      </button>
 
       {/* Filter tabs */}
       <div className="flex gap-2">
@@ -121,10 +143,65 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
           <div className="text-center py-10 text-gray-400">
             <div className="text-5xl mb-3">🤷</div>
             <p className="font-semibold">No matching recipes</p>
-            <p className="text-sm mt-1">Try adding more ingredients to see more recipes!</p>
+            <p className="text-sm mt-1">Try adding more ingredients or hit Surprise me!</p>
           </div>
         )}
       </div>
+
+      {/* Surprise me reveal modal */}
+      <AnimatePresence>
+        {surpriseRecipe && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center"
+            onClick={() => setSurpriseRecipe(null)}
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 40, opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 22, stiffness: 280 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 w-full max-w-sm mx-4 mb-6 sm:mb-0 shadow-2xl text-center"
+            >
+              <p className="text-sm font-bold text-purple-500 mb-1">🎲 Tonight's pick is...</p>
+              <div className="text-6xl mb-2">{surpriseRecipe.emoji}</div>
+              <h2 className="text-2xl font-display font-black">{surpriseRecipe.title}</h2>
+              <p className="text-sm text-gray-500 mt-1">{surpriseRecipe.description}</p>
+              <div className="flex justify-center gap-3 mt-3 text-xs text-gray-400">
+                <span>⏱ {(surpriseRecipe.prep_time_mins ?? 0) + (surpriseRecipe.cook_time_mins ?? 0)} min</span>
+                <span>👥 {surpriseRecipe.servings} servings</span>
+                <span>🔥 {surpriseRecipe.difficulty}</span>
+              </div>
+
+              <div className="mt-5 space-y-2">
+                <button
+                  onClick={() => {
+                    setSelectedRecipe(surpriseRecipe);
+                    setCookingStep(null);
+                    setSurpriseRecipe(null);
+                  }}
+                  className="btn-primary w-full text-lg py-3.5"
+                >
+                  👨‍🍳 Let's cook this!
+                </button>
+                <button
+                  onClick={pickSurprise}
+                  className="w-full py-3 rounded-2xl font-bold text-purple-600 bg-purple-50"
+                >
+                  🎲 Try another
+                </button>
+                <button
+                  onClick={() => setSurpriseRecipe(null)}
+                  className="w-full py-2 text-sm text-gray-400 underline"
+                >
+                  📖 Browse all recipes instead
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Recipe detail sheet */}
       <AnimatePresence>
@@ -197,7 +274,8 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-purple-600 z-50 flex flex-col p-6"
           >
-            <div className="h-1.5 text-teal-500 rounded-full mb-6">
+            {/* Progress bar */}
+            <div className="h-1.5 bg-teal-500 rounded-full mb-6">
               <div
                 className="h-full bg-white rounded-full transition-all duration-500"
                 style={{ width: `${((cookingStep + 1) / steps.length) * 100}%` }}
@@ -205,7 +283,10 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
             </div>
 
             <div className="flex items-center justify-between mb-6">
-              <button onClick={() => { setCookingStep(null); }} className="text-purple-200 font-bold">
+              <button
+                onClick={() => { setCookingStep(null); }}
+                className="text-purple-200 font-bold"
+              >
                 ← Back
               </button>
               <span className="text-white font-bold opacity-80">
