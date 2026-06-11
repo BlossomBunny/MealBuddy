@@ -17,6 +17,8 @@ export interface Family {
   id: string;
   name: string;
   invite_code: string;
+  icon_emoji?: string | null;
+  icon_url?: string | null;
   created_at: string;
 }
 
@@ -25,6 +27,7 @@ export interface Profile {
   family_id: string | null;
   display_name: string | null;
   avatar_emoji: string;
+  avatar_url?: string | null;
   created_at: string;
 }
 
