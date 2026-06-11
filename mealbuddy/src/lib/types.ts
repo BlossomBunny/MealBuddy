@@ -100,6 +100,7 @@ export interface ShoppingItem {
   added_by: string | null;
   recipe_id: string | null;
   created_at: string;
+  expires_at: string | null; 
 }
 
 export interface CookLog {
