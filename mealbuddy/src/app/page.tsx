@@ -81,7 +81,7 @@ export default async function HomePage() {
           <div className="text-4xl">🍳</div>
           <div>
             <div className="font-bold">Find a meal</div>
-            <div className="text-sm text-gray-500">Browse recipes or get an AI surprise</div>
+            <div className="text-sm text-gray-500">Browse recipes or hit Surprise me!</div>
           </div>
           <div className="ml-auto text-purple-300 text-xl">›</div>
         </Link>
