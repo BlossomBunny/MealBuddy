@@ -15,5 +15,15 @@ export default async function FamilyPage() {
     .eq("id", user.id)
     .single();
 
-  return <FamilySetupClient profile={profile} user={user} />;
+  let members: { id: string; display_name: string | null; avatar_emoji: string | null; avatar_url: string | null }[] = [];
+  if (profile?.family_id) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, display_name, avatar_emoji, avatar_url")
+      .eq("family_id", profile.family_id)
+      .order("created_at");
+    members = data ?? [];
+  }
+
+  return <FamilySetupClient profile={profile} user={user} members={members} />;
 }

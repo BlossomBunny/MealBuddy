@@ -8,13 +8,22 @@ import toast from "react-hot-toast";
 
 const AVATAR_OPTIONS = ["🧑‍🍳", "👩‍🍳", "👨‍🍳", "🧒", "👧", "🧑", "👦", "🧓", "👩", "👨"];
 
+interface FamilyMember {
+  id: string;
+  display_name: string | null;
+  avatar_emoji: string | null;
+  avatar_url: string | null;
+}
+
 export default function FamilySetupClient({
   profile,
   user,
+  members = [],
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   profile: any;
   user: { id: string };
+  members?: FamilyMember[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -115,6 +124,31 @@ export default function FamilySetupClient({
           <Link href="/profile" className="btn-secondary mt-3 w-full block">
             ⚙️ Edit avatar & family icon
           </Link>
+        </div>
+
+        {/* Family members */}
+        <div className="card p-4 mt-4">
+          <p className="font-display font-black mb-3">
+            👨‍👩‍👧‍👦 Family members ({members.length})
+          </p>
+          <div className="space-y-3">
+            {members.map((m) => (
+              <div key={m.id} className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center overflow-hidden shrink-0">
+                  {m.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl">{m.avatar_emoji ?? "🧑‍🍳"}</span>
+                  )}
+                </div>
+                <span className="font-semibold">
+                  {m.display_name ?? "Family member"}
+                  {m.id === user.id ? " (You)" : ""}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
