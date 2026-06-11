@@ -5,13 +5,13 @@ import BottomNav from "@/components/BottomNav";
 import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
-  title: "🍽️ Family Meal Planner",
-  description: "Plan meals, track ingredients, and cook together as a family!",
+  title: "🍽️ Meal Buddy",
+  description: "Shop smarter. Eat better.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Meal Planner",
+    title: "Meal Buddy",
   },
 };
 
