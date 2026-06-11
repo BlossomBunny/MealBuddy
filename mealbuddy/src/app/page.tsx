@@ -38,14 +38,27 @@ export default async function HomePage() {
   return (
     <div className="p-5 space-y-5">
       {/* Header */}
-      <div className="pt-6 pb-2">
-        <p className="text-purple-600 font-semibold">{greeting} 👋</p>
-        <h1 className="text-3xl font-display font-black mt-0.5">
-          {profile.display_name ?? "Chef"}
-        </h1>
-        <p className="text-gray-500 text-sm mt-0.5">
-          {profile.families?.name} · {ingredientCount} ingredients tracked
-        </p>
+      <div className="pt-6 pb-2 flex items-center gap-4">
+        <div className="flex-1">
+          <p className="text-purple-600 font-semibold">{greeting} 👋</p>
+          <h1 className="text-3xl font-display font-black mt-0.5">
+            {profile.display_name ?? "Chef"}
+          </h1>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {profile.families?.name} · {ingredientCount} ingredients tracked
+          </p>
+        </div>
+        <Link
+          href="/profile"
+          className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center overflow-hidden shrink-0 active:scale-95 transition-transform"
+        >
+          {profile.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.avatar_url} alt="Your avatar" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-3xl">{profile.avatar_emoji ?? "🧑‍🍳"}</span>
+          )}
+        </Link>
       </div>
 
       {/* Quick stats */}
