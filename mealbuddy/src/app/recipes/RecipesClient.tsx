@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
-import type { Recipe } from "@/lib/types";
+import type { Recipe, IngredientCategory } from "@/lib/types";
 import confetti from "canvas-confetti";
 
 interface Props {
@@ -18,6 +18,24 @@ function matchScore(recipe: Recipe, owned: string[]): number {
   const needed = recipe.ingredients.map((i) => i.name.toLowerCase());
   const matches = needed.filter((n) => owned.some((o) => n.includes(o) || o.includes(n)));
   return needed.length ? matches.length / needed.length : 0;
+}
+
+// Rough emoji → shopping category mapping so auto-added items land in a sensible place
+const EMOJI_TO_CATEGORY: Record<string, IngredientCategory> = {
+  "🥦": "produce", "🥕": "produce", "🍅": "produce", "🧅": "produce", "🥔": "produce",
+  "🍋": "produce", "🍎": "produce", "🫑": "produce", "🥒": "produce", "🌽": "produce",
+  "🥬": "produce", "🍌": "produce", "🫐": "produce", "🫚": "produce",
+  "🥩": "meat", "🍗": "meat", "🥓": "meat", "🐟": "meat", "🍤": "meat", "🦐": "meat", "🌱": "meat",
+  "🥚": "dairy", "🥛": "dairy", "🧀": "dairy", "🧈": "dairy", "🥣": "dairy",
+  "🍞": "bakery", "🥖": "bakery", "🥐": "bakery", "🫓": "bakery", "🥯": "bakery",
+  "🧊": "frozen", "🍦": "frozen", "🥶": "frozen",
+  "🌾": "pantry", "🍚": "pantry", "🍝": "pantry", "🥫": "pantry", "🫒": "pantry",
+  "🧂": "pantry", "🌶️": "pantry", "🧄": "pantry", "🫙": "pantry", "🍜": "pantry",
+  "🍯": "pantry", "🍁": "pantry", "🌿": "pantry", "🥢": "pantry",
+};
+
+function categorize(emoji: string): IngredientCategory {
+  return EMOJI_TO_CATEGORY[emoji] ?? "other";
 }
 
 // Format a scaled quantity nicely — uses fraction symbols for common halves/quarters/thirds
@@ -46,6 +64,8 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
   const [showRating, setShowRating] = useState(false);
   const [surpriseRecipe, setSurpriseRecipe] = useState<Recipe | null>(null);
   const [targetServings, setTargetServings] = useState(4);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [addingToList, setAddingToList] = useState(false);
 
   function openRecipe(recipe: Recipe) {
     setSelectedRecipe(recipe);
@@ -53,15 +73,79 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
     setTargetServings(recipe.servings || 4);
   }
 
+  // Most common tags across the recipe library, used for the category filter row
+  const allTags = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of recipes) for (const t of r.tags ?? []) counts[t] = (counts[t] ?? 0) + 1;
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag]) => tag);
+  }, [recipes]);
+
   const sorted = [...recipes].sort((a, b) => {
     const sa = matchScore(a, ownedIngredientNames);
     const sb = matchScore(b, ownedIngredientNames);
     return sb - sa;
   });
 
-  const filtered = filter === "can-make"
-    ? sorted.filter((r) => matchScore(r, ownedIngredientNames) >= 0.5)
-    : sorted;
+  const filtered = sorted
+    .filter((r) => (filter === "can-make" ? matchScore(r, ownedIngredientNames) >= 0.5 : true))
+    .filter((r) => (activeTag ? (r.tags ?? []).includes(activeTag) : true));
+
+  // Ingredients from the selected recipe that aren't in the fridge/pantry yet
+  const missingIngredients = useMemo(() => {
+    if (!selectedRecipe) return [];
+    return selectedRecipe.ingredients.filter((ing) => {
+      const lower = ing.name.toLowerCase();
+      return !ownedIngredientNames.some((o) => lower.includes(o) || o.includes(lower));
+    });
+  }, [selectedRecipe, ownedIngredientNames]);
+
+  async function addMissingToShoppingList() {
+    if (!selectedRecipe || missingIngredients.length === 0) return;
+    setAddingToList(true);
+    try {
+      const scale = targetServings / (selectedRecipe.servings || 1);
+
+      // Skip anything already sitting on the shopping list
+      const { data: existingItems } = await supabase
+        .from("shopping_items")
+        .select("name")
+        .eq("family_id", familyId)
+        .eq("checked", false);
+      const existingNames = (existingItems ?? []).map((i) => i.name.toLowerCase());
+
+      const toAdd = missingIngredients.filter((ing) => {
+        const lower = ing.name.toLowerCase();
+        return !existingNames.some((n) => lower.includes(n) || n.includes(lower));
+      });
+
+      if (toAdd.length === 0) {
+        toast.success("Already on your shopping list! 🛒");
+        return;
+      }
+
+      const rows = toAdd.map((ing) => ({
+        family_id: familyId,
+        added_by: userId,
+        name: ing.name,
+        emoji: ing.emoji || "🛒",
+        category: categorize(ing.emoji),
+        quantity: ing.quantity != null ? Math.round(ing.quantity * scale * 100) / 100 : null,
+        unit: ing.unit || null,
+        recipe_id: selectedRecipe.id,
+      }));
+
+      const { error } = await supabase.from("shopping_items").insert(rows);
+      if (error) {
+        toast.error(error.message || "Couldn't update shopping list");
+        return;
+      }
+      toast.success(`Added ${toAdd.length} item${toAdd.length > 1 ? "s" : ""} to your shopping list! 🛒`);
+    } finally {
+      setAddingToList(false);
+    }
+  }
 
   async function logCook(recipeId: string, recipeTitle: string, rating: number) {
     await supabase.from("cook_log").insert({
@@ -122,6 +206,31 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
           </button>
         ))}
       </div>
+
+      {/* Category / tag filter */}
+      {allTags.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
+          <button
+            onClick={() => setActiveTag(null)}
+            className={`flex-shrink-0 badge transition-all ${
+              activeTag === null ? "bg-purple-600 text-white" : "bg-white text-gray-600 border border-gray-200"
+            }`}
+          >
+            🏷️ All
+          </button>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setActiveTag((t) => (t === tag ? null : tag))}
+              className={`flex-shrink-0 badge transition-all capitalize ${
+                activeTag === tag ? "bg-purple-600 text-white" : "bg-white text-gray-600 border border-gray-200"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Recipe cards */}
       <div className="space-y-3">
@@ -304,6 +413,19 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                     })}
                   </div>
                 </div>
+
+                {/* Add missing ingredients to shopping list */}
+                {missingIngredients.length > 0 && (
+                  <button
+                    onClick={addMissingToShoppingList}
+                    disabled={addingToList}
+                    className="w-full py-3 rounded-2xl font-bold text-purple-600 bg-purple-50 disabled:opacity-60 transition-colors"
+                  >
+                    {addingToList
+                      ? "Adding…"
+                      : `🛒 Add ${missingIngredients.length} missing item${missingIngredients.length > 1 ? "s" : ""} to shopping list`}
+                  </button>
+                )}
 
                 {/* Start cooking button */}
                 <button
