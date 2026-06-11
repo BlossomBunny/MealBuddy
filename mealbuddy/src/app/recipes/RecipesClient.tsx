@@ -20,6 +20,23 @@ function matchScore(recipe: Recipe, owned: string[]): number {
   return needed.length ? matches.length / needed.length : 0;
 }
 
+// Format a scaled quantity nicely — uses fraction symbols for common halves/quarters/thirds
+function formatQty(n: number): string {
+  const rounded = Math.round(n * 100) / 100;
+  const whole = Math.floor(rounded);
+  const frac = rounded - whole;
+  const fracMap: [number, string][] = [
+    [0.25, "¼"], [0.33, "⅓"], [0.5, "½"], [0.67, "⅔"], [0.75, "¾"],
+  ];
+  for (const [val, sym] of fracMap) {
+    if (Math.abs(frac - val) < 0.05) {
+      return whole > 0 ? `${whole}${sym}` : sym;
+    }
+  }
+  if (frac < 0.05 || frac > 0.95) return `${Math.round(rounded)}`;
+  return `${rounded}`;
+}
+
 export default function RecipesClient({ initialRecipes, ownedIngredientNames, familyId, userId }: Props) {
   const supabase = createClient();
   const [recipes] = useState<Recipe[]>(initialRecipes);
@@ -28,6 +45,13 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
   const [cookingStep, setCookingStep] = useState<number | null>(null);
   const [showRating, setShowRating] = useState(false);
   const [surpriseRecipe, setSurpriseRecipe] = useState<Recipe | null>(null);
+  const [targetServings, setTargetServings] = useState(4);
+
+  function openRecipe(recipe: Recipe) {
+    setSelectedRecipe(recipe);
+    setCookingStep(null);
+    setTargetServings(recipe.servings || 4);
+  }
 
   const sorted = [...recipes].sort((a, b) => {
     const sa = matchScore(a, ownedIngredientNames);
@@ -108,7 +132,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
             <motion.div
               key={recipe.id}
               whileTap={{ scale: 0.98 }}
-              onClick={() => { setSelectedRecipe(recipe); setCookingStep(null); }}
+              onClick={() => openRecipe(recipe)}
               className="card p-4 cursor-pointer"
             >
               <div className="flex items-start gap-3">
@@ -177,8 +201,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
               <div className="mt-5 space-y-2">
                 <button
                   onClick={() => {
-                    setSelectedRecipe(surpriseRecipe);
-                    setCookingStep(null);
+                    openRecipe(surpriseRecipe);
                     setSurpriseRecipe(null);
                   }}
                   className="btn-primary w-full text-lg py-3.5"
@@ -226,7 +249,6 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                     <p className="text-sm text-gray-500 mt-0.5">{selectedRecipe.description}</p>
                     <div className="flex gap-3 mt-2 text-xs text-gray-400">
                       <span>⏱ {(selectedRecipe.prep_time_mins ?? 0) + (selectedRecipe.cook_time_mins ?? 0)} min</span>
-                      <span>👥 {selectedRecipe.servings} servings</span>
                       <span>🔥 {selectedRecipe.difficulty}</span>
                     </div>
                   </div>
@@ -234,6 +256,33 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
               </div>
 
               <div className="p-5 space-y-5">
+                {/* Servings adjuster */}
+                <div className="flex items-center justify-between bg-purple-50 rounded-2xl p-3">
+                  <span className="font-bold text-sm">👥 Servings</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setTargetServings((s) => Math.max(1, s - 1))}
+                      className="w-9 h-9 rounded-full bg-white shadow-sm font-display font-black text-purple-600 text-lg active:scale-90 transition-transform"
+                      aria-label="Fewer servings"
+                    >
+                      −
+                    </button>
+                    <span className="font-display font-black text-lg w-6 text-center">{targetServings}</span>
+                    <button
+                      onClick={() => setTargetServings((s) => Math.min(12, s + 1))}
+                      className="w-9 h-9 rounded-full bg-white shadow-sm font-display font-black text-purple-600 text-lg active:scale-90 transition-transform"
+                      aria-label="More servings"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                {targetServings !== selectedRecipe.servings && (
+                  <p className="text-xs text-gray-400 -mt-3">
+                    Quantities below are scaled from the original {selectedRecipe.servings} servings 🔢
+                  </p>
+                )}
+
                 {/* Ingredients */}
                 <div>
                   <h3 className="font-display font-black text-lg mb-3">Ingredients</h3>
@@ -242,11 +291,13 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                       const have = ownedIngredientNames.some(
                         (o) => ing.name.toLowerCase().includes(o) || o.includes(ing.name.toLowerCase())
                       );
+                      const scale = targetServings / (selectedRecipe.servings || 1);
+                      const scaledQty = ing.quantity != null ? formatQty(ing.quantity * scale) : null;
                       return (
                         <div key={i} className={`flex items-center gap-3 p-2 rounded-xl ${have ? "bg-green-50" : "bg-gray-50"}`}>
                           <span className="text-xl">{ing.emoji}</span>
                           <span className="flex-1 font-medium">{ing.name}</span>
-                          <span className="text-sm text-gray-500">{ing.quantity} {ing.unit}</span>
+                          <span className="text-sm text-gray-500">{scaledQty} {ing.unit}</span>
                           {have && <span className="text-green-500 text-sm">✓</span>}
                         </div>
                       );
