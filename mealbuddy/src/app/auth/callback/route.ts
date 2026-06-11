@@ -1,15 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
+// No longer used — auth is handled via simple name/passcode + cookie.
+// Kept as a harmless redirect in case any old links still point here.
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
-
-  if (code) {
-    const supabase = createClient();
-    await supabase.auth.exchangeCodeForSession(code);
-  }
-
-  return NextResponse.redirect(`${origin}${next}`);
+  const { origin } = new URL(request.url);
+  return NextResponse.redirect(`${origin}/login`);
 }
