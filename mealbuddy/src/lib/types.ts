@@ -93,6 +93,7 @@ export interface ShoppingItem {
   family_id: string;
   name: string;
   emoji: string;
+  category: IngredientCategory;
   quantity: number | null;
   unit: string | null;
   checked: boolean;
