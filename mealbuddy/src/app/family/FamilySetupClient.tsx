@@ -4,7 +4,6 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import type { User } from "@supabase/supabase-js";
 
 const AVATAR_OPTIONS = ["🧑‍🍳", "👩‍🍳", "👨‍🍳", "🧒", "👧", "🧑", "👦", "🧓", "👩", "👨"];
 
@@ -14,7 +13,7 @@ export default function FamilySetupClient({
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   profile: any;
-  user: User;
+  user: { id: string };
 }) {
   const router = useRouter();
   const supabase = createClient();
