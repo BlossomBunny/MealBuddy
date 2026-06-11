@@ -61,7 +61,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
       .single();
 
     if (error) {
-      toast.error("Couldn't add ingredient");
+      toast.error(error.message || "Couldn't add ingredient");
       return;
     }
     setIngredients((prev) => [...prev, data]);
@@ -216,7 +216,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-50 p-5 pb-10 space-y-4"
+              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-50 p-5 pb-10 space-y-4 max-h-[85vh] overflow-y-auto overscroll-contain"
             >
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
               <h2 className="text-xl font-display font-black">Add ingredient</h2>
