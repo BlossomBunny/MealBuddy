@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
@@ -24,6 +24,8 @@ const EMOJI_SUGGESTIONS: Record<string, string[]> = {
   other: ["🛒", "🥤", "🧃", "☕"],
 };
 
+const UNITS = ["g", "kg", "ml", "L", "tbsp", "tsp", "cups", "pcs", "bunch", "tin", "bag", "box"];
+
 const QUICK_ADD: [string, string, IngredientCategory][] = [
   ["🥛", "Milk", "dairy"], ["🍞", "Bread", "bakery"], ["🥚", "Eggs", "dairy"], ["🧈", "Butter", "dairy"],
   ["🧀", "Cheese", "dairy"], ["🥩", "Chicken", "meat"], ["🍅", "Tomatoes", "produce"], ["🥦", "Broccoli", "produce"],
@@ -35,10 +37,42 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
   const [newItem, setNewItem] = useState("");
   const [newEmoji, setNewEmoji] = useState("🛒");
   const [newCategory, setNewCategory] = useState<IngredientCategory>("other");
+  const [newQuantity, setNewQuantity] = useState("");
+  const [newUnit, setNewUnit] = useState("");
+  const [newExpiry, setNewExpiry] = useState("");
+  const [showDetails, setShowDetails] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
 
   const unchecked = items.filter((i) => !i.checked);
   const checked = items.filter((i) => i.checked);
+
+  // Live-sync the shopping list across devices/family members
+  useEffect(() => {
+    const channel = supabase
+      .channel(`shopping_items_${familyId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shopping_items", filter: `family_id=eq.${familyId}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newItem = payload.new as ShoppingItem;
+            setItems((prev) => (prev.some((i) => i.id === newItem.id) ? prev : [newItem, ...prev]));
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as ShoppingItem;
+            setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+          } else if (payload.eventType === "DELETE") {
+            const removedId = (payload.old as { id: string }).id;
+            setItems((prev) => prev.filter((i) => i.id !== removedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyId]);
 
   async function addItem(name?: string, emoji?: string, category?: IngredientCategory) {
     const itemName = (name ?? newItem).trim();
@@ -54,6 +88,9 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
         name: itemName,
         emoji: itemEmoji,
         category: itemCategory,
+        quantity: !name && newQuantity ? parseFloat(newQuantity) : null,
+        unit: !name && newUnit ? newUnit : null,
+        expires_at: !name && newExpiry ? newExpiry : null,
       })
       .select()
       .single();
@@ -64,6 +101,10 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
       setNewItem("");
       setNewEmoji("🛒");
       setNewCategory("other");
+      setNewQuantity("");
+      setNewUnit("");
+      setNewExpiry("");
+      setShowDetails(false);
     }
   }
 
@@ -84,7 +125,13 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
 
       await supabase
         .from("ingredients")
-        .update({ quantity: newQty, updated_at: new Date().toISOString() })
+        .update({
+          quantity: newQty,
+          unit: existing.unit ?? item.unit ?? null,
+          // A freshly bought item's expiry takes priority over whatever was there before
+          expires_at: item.expires_at ?? existing.expires_at ?? null,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", existing.id);
     } else {
       await supabase.from("ingredients").insert({
@@ -95,6 +142,7 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
         category: item.category ?? "other",
         quantity: item.quantity ?? null,
         unit: item.unit ?? null,
+        expires_at: item.expires_at ?? null,
       });
     }
   }
@@ -205,6 +253,52 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
             </button>
           ))}
         </div>
+
+        {/* Optional details: quantity, unit, expiry */}
+        <button
+          onClick={() => setShowDetails((s) => !s)}
+          className="text-sm font-semibold text-purple-500"
+        >
+          {showDetails ? "− Hide details" : "+ Add quantity / expiry (optional)"}
+        </button>
+        {showDetails && (
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold mb-1.5">Quantity</label>
+                <input
+                  className="input"
+                  type="number"
+                  placeholder="e.g. 500"
+                  value={newQuantity}
+                  onChange={(e) => setNewQuantity(e.target.value)}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-semibold mb-1.5">Unit</label>
+                <select
+                  className="input"
+                  value={newUnit}
+                  onChange={(e) => setNewUnit(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {UNITS.map((u) => <option key={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1.5">
+                Expiry date <span className="font-normal text-gray-400">(optional)</span>
+              </label>
+              <input
+                className="input"
+                type="date"
+                value={newExpiry}
+                onChange={(e) => setNewExpiry(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Quick add suggestions */}
@@ -247,7 +341,14 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
                       className="w-6 h-6 rounded-full border-2 border-purple-300 flex-shrink-0 transition-all hover:border-purple-600"
                     />
                     <span className="text-2xl">{item.emoji}</span>
-                    <span className="flex-1 font-medium">{item.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{item.name}</div>
+                      {item.expires_at && (
+                        <div className="text-xs text-gray-400">
+                          📅 Use by {new Date(item.expires_at).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
                     {item.quantity && (
                       <span className="text-sm text-gray-400">{item.quantity} {item.unit}</span>
                     )}
