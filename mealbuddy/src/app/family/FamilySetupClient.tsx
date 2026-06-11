@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
 
 const AVATAR_OPTIONS = ["🧑‍🍳", "👩‍🍳", "👨‍🍳", "🧒", "👧", "🧑", "👦", "🧓", "👩", "👨"];
@@ -84,7 +85,14 @@ export default function FamilySetupClient({
     return (
       <div className="p-5">
         <div className="card p-5 text-center">
-          <div className="text-5xl mb-3">👨‍👩‍👧‍👦</div>
+          <div className="w-20 h-20 mx-auto mb-3 rounded-2xl bg-purple-50 flex items-center justify-center overflow-hidden">
+            {family.icon_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={family.icon_url} alt={family.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-5xl">{family.icon_emoji ?? "👨‍👩‍👧‍👦"}</span>
+            )}
+          </div>
           <h1 className="text-2xl font-display font-black">{family.name}</h1>
           <p className="text-gray-500 mt-1 text-sm">Your family group</p>
           <div className="mt-5 bg-purple-50 rounded-xl p-4">
@@ -104,6 +112,9 @@ export default function FamilySetupClient({
           >
             Copy invite code
           </button>
+          <Link href="/profile" className="btn-secondary mt-3 w-full block">
+            ⚙️ Edit avatar & family icon
+          </Link>
         </div>
       </div>
     );
