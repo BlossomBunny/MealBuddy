@@ -9,18 +9,19 @@
 -- batch-cook/freezer-friendly meals.
 -- Same dietary rules as before: plant-based meats, passata,
 -- garlic/ginger powder, no onions, no vinegar, cheddar or mozzarella
--- only, and no seafood/lamb/venison.
+-- only, no seafood/lamb/venison, butter must be plant-based, and
+-- no olives or pickles/gherkins.
 -- ============================================================
 
 insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags, ingredients, steps) values
 
-('Chicken & Broccoli Stir-Fry', '🥦', 'A speedy, saucy stir-fry that''s on the table before you know it!', 10, 12, 4, 'easy',
-  ARRAY['asian','quick','chicken','rice'],
+('Chicken & Broccoli Noodle Stir-Fry', '🍜', 'A speedy, saucy stir-fry that''s on the table before you know it!', 10, 12, 4, 'easy',
+  ARRAY['asian','quick','chicken','noodles'],
   '[
     {"name":"chicken breast (diced)","quantity":500,"unit":"g","emoji":"🍗"},
     {"name":"broccoli (cut into small florets)","quantity":300,"unit":"g","emoji":"🥦"},
     {"name":"carrots (sliced)","quantity":2,"unit":"","emoji":"🥕"},
-    {"name":"rice","quantity":300,"unit":"g","emoji":"🍚"},
+    {"name":"straight-to-wok noodles","quantity":4,"unit":"nests (about 400g)","emoji":"🍜"},
     {"name":"soy sauce","quantity":4,"unit":"tbsp","emoji":"🫙"},
     {"name":"sesame oil","quantity":1,"unit":"tsp","emoji":"🫙"},
     {"name":"garlic powder","quantity":1,"unit":"tsp","emoji":"🧄"},
@@ -28,12 +29,12 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"name":"vegetable oil","quantity":2,"unit":"tbsp","emoji":"🫙"}
   ]'::jsonb,
   '[
-    {"step":1,"description":"Cook the rice according to pack instructions and keep warm."},
+    {"step":1,"description":"If using dried noodles, cook according to pack instructions and drain. Straight-to-wok noodles just need loosening with your fingers — ready to go."},
     {"step":2,"description":"Heat 1 tbsp vegetable oil in a wok or large frying pan over high heat. Stir-fry the chicken for 5–6 minutes until cooked through and golden. Remove and set aside."},
     {"step":3,"description":"Add the remaining oil to the pan, then stir-fry the broccoli and carrots for 4–5 minutes until just tender but still a little crisp.","tip":"Cutting the broccoli into small, even florets helps it cook quickly without going soggy."},
     {"step":4,"description":"Stir in the garlic powder and ginger and cook for 30 seconds until fragrant."},
-    {"step":5,"description":"Return the chicken to the pan, add the soy sauce and sesame oil, and toss everything together for 1–2 minutes until well coated and piping hot."},
-    {"step":6,"description":"Serve over the rice. 🥦"}
+    {"step":5,"description":"Return the chicken to the pan, add the noodles, soy sauce, and sesame oil, and toss everything together for 1–2 minutes until well coated and piping hot."},
+    {"step":6,"description":"Serve straight away. 🍜"}
   ]'::jsonb),
 
 ('Chicken Fried Rice', '🍚', 'A protein-packed twist on fried rice — perfect for using up leftover chicken.', 10, 12, 4, 'easy',
@@ -64,7 +65,7 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"name":"mushrooms (sliced)","quantity":300,"unit":"g","emoji":"🍄"},
     {"name":"garlic powder","quantity":1,"unit":"tsp","emoji":"🧄"},
     {"name":"dried mixed herbs","quantity":1,"unit":"tsp","emoji":"🌿"},
-    {"name":"butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
+    {"name":"plant-based butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
     {"name":"cream cheese","quantity":150,"unit":"g","emoji":"🧀"},
     {"name":"milk","quantity":200,"unit":"ml","emoji":"🥛"},
     {"name":"cheddar","quantity":100,"unit":"g, grated","emoji":"🧀"},
@@ -72,11 +73,11 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
   ]'::jsonb,
   '[
     {"step":1,"description":"Preheat the oven to 200°C (fan 180°C). Cook the pasta in well-salted boiling water for 2 minutes less than the pack instructions, then drain."},
-    {"step":2,"description":"Melt the butter in a large oven-proof pan or skillet over medium-high heat. Fry the mushrooms for 5–6 minutes until golden and most of their liquid has evaporated.","tip":"Don't overcrowd the pan — if needed, fry the mushrooms in two batches so they brown nicely instead of steaming."},
+    {"step":2,"description":"Melt the plant-based butter in a large oven-proof pan or skillet over medium-high heat. Fry the mushrooms for 5–6 minutes until golden and most of their liquid has evaporated.","tip":"Don''t overcrowd the pan — if needed, fry the mushrooms in two batches so they brown nicely instead of steaming."},
     {"step":3,"description":"Stir in the garlic powder and dried herbs and cook for 30 seconds until fragrant."},
     {"step":4,"description":"Add the cream cheese and milk, stirring until melted into a smooth sauce. Season with salt and pepper."},
     {"step":5,"description":"Toss the drained pasta through the sauce, then stir in half the cheddar."},
-    {"step":6,"description":"If your pan isn't oven-proof, transfer everything to a baking dish. Top with the remaining cheddar and the torn mozzarella."},
+    {"step":6,"description":"If your pan isn''t oven-proof, transfer everything to a baking dish. Top with the remaining cheddar and the torn mozzarella."},
     {"step":7,"description":"Bake for 12–15 minutes until golden and bubbling. Serve hot. 🍄"}
   ]'::jsonb),
 
@@ -95,7 +96,7 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
   '[
     {"step":1,"description":"Preheat the oven to 220°C (fan 200°C). On a floured surface, roll out each piece of dough into an oval."},
     {"step":2,"description":"Mix the passata with the garlic powder and oregano."},
-    {"step":3,"description":"Heat a little oil in a pan and fry the mushrooms and peppers for 4–5 minutes until softened and any liquid has cooked off.","tip":"Cook off as much liquid as you can here so your calzones don't go soggy."},
+    {"step":3,"description":"Heat a little oil in a pan and fry the mushrooms and peppers for 4–5 minutes until softened and any liquid has cooked off.","tip":"Cook off as much liquid as you can here so your calzones don''t go soggy."},
     {"step":4,"description":"Spread the passata mixture over one half of each dough oval, leaving a border around the edge. Top with the mushroom and pepper mixture and the torn mozzarella."},
     {"step":5,"description":"Fold the dough over the filling to make a half-moon shape and press the edges firmly to seal — crimp with a fork for extra security."},
     {"step":6,"description":"Brush the tops with olive oil and place on a baking tray."},
@@ -137,7 +138,7 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
   ]'::jsonb,
   '[
     {"step":1,"description":"Preheat the oven to 200°C (fan 180°C). Prick the sweet potatoes a few times with a fork, rub with a little oil, and place on a baking tray."},
-    {"step":2,"description":"Bake for 40–45 minutes until tender all the way through.","tip":"A knife should slide in easily when they're ready — bigger potatoes may need a little longer."},
+    {"step":2,"description":"Bake for 40–45 minutes until tender all the way through.","tip":"A knife should slide in easily when they''re ready — bigger potatoes may need a little longer."},
     {"step":3,"description":"Meanwhile, heat the remaining oil in a pan and cook the plant-based mince with the smoked paprika and cumin for 5 minutes."},
     {"step":4,"description":"Stir in the passata and sweetcorn and simmer for 8–10 minutes until thickened."},
     {"step":5,"description":"Slice the sweet potatoes open lengthways and fluff up the inside with a fork."},
@@ -154,7 +155,7 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"name":"garlic powder","quantity":1,"unit":"tsp","emoji":"🧄"},
     {"name":"dried mixed herbs","quantity":1,"unit":"tsp","emoji":"🌿"},
     {"name":"potatoes","quantity":1,"unit":"kg","emoji":"🥔"},
-    {"name":"butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
+    {"name":"plant-based butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
     {"name":"milk","quantity":100,"unit":"ml","emoji":"🥛"},
     {"name":"cheddar","quantity":80,"unit":"g, grated","emoji":"🧀"}
   ]'::jsonb,
@@ -163,7 +164,7 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"step":2,"description":"Meanwhile, brown the mince in a large pan over medium-high heat for 6–8 minutes."},
     {"step":3,"description":"Add the diced carrots, garlic powder, and dried herbs, and cook for 3–4 minutes."},
     {"step":4,"description":"Stir in the passata and simmer for 10–15 minutes until thickened into a rich sauce.","tip":"The longer this simmers, the better it tastes — give it extra time if you have it."},
-    {"step":5,"description":"Drain the potatoes and mash with the butter and milk until smooth. Season to taste."},
+    {"step":5,"description":"Drain the potatoes and mash with the plant-based butter and milk until smooth. Season to taste."},
     {"step":6,"description":"Preheat the oven to 200°C (fan 180°C). Spoon the meat mixture into a baking dish, then spread the mash on top and fluff the surface with a fork."},
     {"step":7,"description":"Sprinkle the cheddar over the top and bake for 20–25 minutes until golden and bubbling. Serve hot. 🥧","tip":"This freezes brilliantly — assemble, cool, and freeze before baking for an easy future meal."}
   ]'::jsonb),
@@ -191,14 +192,14 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
   '[
     {"name":"baking potatoes","quantity":4,"unit":"large","emoji":"🥔"},
     {"name":"mushrooms (sliced)","quantity":250,"unit":"g","emoji":"🍄"},
-    {"name":"butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
+    {"name":"plant-based butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
     {"name":"garlic powder","quantity":0.5,"unit":"tsp","emoji":"🧄"},
     {"name":"cream cheese","quantity":100,"unit":"g","emoji":"🧀"},
     {"name":"cheddar","quantity":100,"unit":"g, grated","emoji":"🧀"}
   ]'::jsonb,
   '[
     {"step":1,"description":"Preheat the oven to 200°C (fan 180°C). Prick the potatoes a few times with a fork and place directly on the oven shelf. Bake for 60 minutes until the skins are crisp and the centres are soft.","tip":"No time to wait? Microwave the potatoes for 5 minutes first to speed things up, then finish in the oven for 25–30 minutes for crispy skins."},
-    {"step":2,"description":"About 10 minutes before the potatoes are ready, melt the butter in a pan and fry the mushrooms for 6–7 minutes until golden."},
+    {"step":2,"description":"About 10 minutes before the potatoes are ready, melt the plant-based butter in a pan and fry the mushrooms for 6–7 minutes until golden."},
     {"step":3,"description":"Stir in the garlic powder and cream cheese until melted into a creamy sauce."},
     {"step":4,"description":"Slice the potatoes open and fluff up the insides with a fork."},
     {"step":5,"description":"Spoon the mushroom mixture over each potato and top with the grated cheddar. Serve hot. 🥔"}
@@ -218,7 +219,7 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
   '[
     {"step":1,"description":"Preheat the oven to 200°C (fan 180°C). Toss the sweet potato wedges with 1 tbsp of the oil, spread out on a baking tray, and roast for 25–30 minutes, turning halfway."},
     {"step":2,"description":"Mix the breadcrumbs with the garlic powder and smoked paprika in a shallow bowl."},
-    {"step":3,"description":"Dip each chicken strip into the beaten egg, then coat in the breadcrumb mixture, pressing gently so it sticks.","tip":"Pressing the crumbs on firmly gives you an extra-crunchy coating that won't fall off."},
+    {"step":3,"description":"Dip each chicken strip into the beaten egg, then coat in the breadcrumb mixture, pressing gently so it sticks.","tip":"Pressing the crumbs on firmly gives you an extra-crunchy coating that won''t fall off."},
     {"step":4,"description":"Place the coated chicken strips on a separate baking tray and drizzle with the remaining oil."},
     {"step":5,"description":"Bake for 15–18 minutes, turning halfway, until golden and cooked through."},
     {"step":6,"description":"Serve the goujons with the sweet potato wedges. 🍗"}

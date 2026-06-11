@@ -3,7 +3,8 @@
 -- Run this in your Supabase SQL Editor (after auth-migration.sql)
 -- Adds 8 more built-in recipes (family_id = null, visible to everyone)
 -- Same dietary rules as the original seed: plant-based meats, passata,
--- garlic/ginger powder, no onions, no vinegar, cheddar or mozzarella only.
+-- garlic/ginger powder, no onions, no vinegar, cheddar or mozzarella only,
+-- butter must be plant-based, and no olives or pickles/gherkins.
 -- ============================================================
 
 insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags, ingredients, steps) values
@@ -16,12 +17,12 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"name":"sweetcorn","quantity":150,"unit":"g","emoji":"🌽"},
     {"name":"bell peppers (finely chopped)","quantity":1,"unit":"","emoji":"🫑"},
     {"name":"smoked paprika","quantity":0.5,"unit":"tsp","emoji":"🌶️"},
-    {"name":"butter","quantity":1,"unit":"tbsp","emoji":"🧈"}
+    {"name":"plant-based butter","quantity":1,"unit":"tbsp","emoji":"🧈"}
   ]'::jsonb,
   '[
     {"step":1,"description":"Lay out 4 tortillas. Sprinkle cheddar evenly over each, then scatter over the sweetcorn and chopped peppers."},
     {"step":2,"description":"Dust with smoked paprika, then top each with a second tortilla to make a sandwich.","tip":"Press down gently so the filling spreads evenly to the edges."},
-    {"step":3,"description":"Melt a little butter in a large frying pan over medium heat. Add a quesadilla and cook 2–3 minutes until golden underneath."},
+    {"step":3,"description":"Melt a little plant-based butter in a large frying pan over medium heat. Add a quesadilla and cook 2–3 minutes until golden underneath."},
     {"step":4,"description":"Carefully flip and cook the other side for 2–3 minutes until golden and the cheese is melted through."},
     {"step":5,"description":"Slide onto a board, slice into wedges, and repeat with the rest. Serve warm! 🧀","tip":"A pizza cutter makes slicing quesadillas super easy."}
   ]'::jsonb),
@@ -51,14 +52,14 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"name":"passata","quantity":500,"unit":"ml","emoji":"🫙"},
     {"name":"garlic powder","quantity":1,"unit":"tsp","emoji":"🧄"},
     {"name":"dried basil","quantity":1,"unit":"tsp","emoji":"🌿"},
-    {"name":"butter","quantity":1,"unit":"tbsp","emoji":"🧈"},
+    {"name":"plant-based butter","quantity":1,"unit":"tbsp","emoji":"🧈"},
     {"name":"cream cheese","quantity":100,"unit":"g","emoji":"🧀"},
     {"name":"cheddar","quantity":50,"unit":"g, grated, to serve","emoji":"🧀"},
     {"name":"salt & pepper","quantity":null,"unit":"to taste","emoji":"🧂"}
   ]'::jsonb,
   '[
     {"step":1,"description":"Cook the pasta in a large pan of well-salted boiling water according to pack instructions. Drain, reserving a mug of pasta water."},
-    {"step":2,"description":"While the pasta cooks, melt the butter in a separate pan over medium heat. Stir in the garlic powder and dried basil for 30 seconds until fragrant."},
+    {"step":2,"description":"While the pasta cooks, melt the plant-based butter in a separate pan over medium heat. Stir in the garlic powder and dried basil for 30 seconds until fragrant."},
     {"step":3,"description":"Pour in the passata and bring to a gentle simmer for 5 minutes."},
     {"step":4,"description":"Stir in the cream cheese until melted and the sauce is silky smooth. Season with salt and pepper.","tip":"If the sauce looks thick, splash in some of the reserved pasta water until glossy."},
     {"step":5,"description":"Toss the drained pasta through the sauce until well coated. Serve topped with grated cheddar. 🍅"}
@@ -112,12 +113,12 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"name":"cheddar","quantity":60,"unit":"g, grated","emoji":"🧀"},
     {"name":"bell peppers (finely chopped)","quantity":0.5,"unit":"","emoji":"🫑"},
     {"name":"cherry tomatoes (halved)","quantity":6,"unit":"","emoji":"🍅"},
-    {"name":"butter","quantity":1,"unit":"tbsp","emoji":"🧈"},
+    {"name":"plant-based butter","quantity":1,"unit":"tbsp","emoji":"🧈"},
     {"name":"salt & pepper","quantity":null,"unit":"to taste","emoji":"🧂"}
   ]'::jsonb,
   '[
     {"step":1,"description":"Whisk the eggs with the milk, salt, and pepper in a bowl until well combined."},
-    {"step":2,"description":"Melt the butter in a non-stick frying pan over medium heat. Add the chopped peppers and cook for 2 minutes to soften slightly."},
+    {"step":2,"description":"Melt the plant-based butter in a non-stick frying pan over medium heat. Add the chopped peppers and cook for 2 minutes to soften slightly."},
     {"step":3,"description":"Pour in the egg mixture and tilt the pan so it spreads evenly. Cook for 1–2 minutes until the edges start to set.","tip":"Use a spatula to gently push the cooked edges toward the centre, letting the runny egg flow underneath."},
     {"step":4,"description":"Scatter the cherry tomatoes and grated cheddar over one half of the omelette."},
     {"step":5,"description":"Once mostly set, fold the omelette in half over the filling and cook for another minute until the cheese melts. Slide onto plates and serve. 🍳"}
@@ -151,7 +152,7 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"name":"egg","quantity":3,"unit":"large","emoji":"🥚"},
     {"name":"milk","quantity":100,"unit":"ml","emoji":"🥛"},
     {"name":"cinnamon","quantity":1,"unit":"tsp","emoji":"🌿"},
-    {"name":"butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
+    {"name":"plant-based butter","quantity":2,"unit":"tbsp","emoji":"🧈"},
     {"name":"maple syrup","quantity":null,"unit":"to serve","emoji":"🍁"},
     {"name":"berries","quantity":null,"unit":"to serve","emoji":"🫐"}
   ]'::jsonb,
@@ -159,6 +160,6 @@ insert into recipes (title, emoji, description, prep_time_mins, cook_time_mins, 
     {"step":1,"description":"In a wide, shallow bowl, whisk together the eggs, milk, and cinnamon."},
     {"step":2,"description":"Slice each piece of bread into 3 thick fingers."},
     {"step":3,"description":"Dip each finger into the egg mixture, turning to coat both sides — let it soak for a few seconds.","tip":"Slightly stale bread soaks up the custard without falling apart."},
-    {"step":4,"description":"Melt the butter in a large frying pan over medium heat. Fry the fingers in batches for 2–3 minutes per side until golden brown."},
+    {"step":4,"description":"Melt the plant-based butter in a large frying pan over medium heat. Fry the fingers in batches for 2–3 minutes per side until golden brown."},
     {"step":5,"description":"Keep warm in a low oven while you finish the rest. Serve stacked up with maple syrup and berries. 🍞"}
   ]'::jsonb);
