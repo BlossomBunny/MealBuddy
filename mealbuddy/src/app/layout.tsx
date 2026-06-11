@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import BottomNav from "@/components/BottomNav";
-import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
   title: "🍽️ Family Meal Planner",
@@ -27,10 +27,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = cookies().get("mb_user")?.value;
 
   return (
     <html lang="en">
