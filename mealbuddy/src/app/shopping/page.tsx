@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import ShoppingClient from "./ShoppingClient";
 
 export default async function ShoppingPage() {
   const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user;
+  const userId = cookies().get("mb_user")?.value;
+  const user = userId ? { id: userId } : null;
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase
