@@ -1,34 +1,29 @@
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const { email, password } = await request.json();
+  const { name, passcode } = await request.json();
+
+  const supabase = createClient();
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("display_name", name.trim())
+    .eq("passcode", passcode.trim())
+    .single();
+
+  if (error || !profile) {
+    return NextResponse.json({ error: "Name or passcode incorrect" }, { status: 401 });
+  }
 
   const response = NextResponse.json({ success: true });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            response.cookies.set(name, value, options as any);
-          });
-        },
-      },
-    }
-  );
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 401 });
-  }
+  response.cookies.set("mb_user", profile.id, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  });
 
   return response;
 }
