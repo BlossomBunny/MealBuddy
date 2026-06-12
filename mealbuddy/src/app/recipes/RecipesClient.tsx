@@ -73,13 +73,26 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
     setTargetServings(recipe.servings || 4);
   }
 
-  // Most common tags across the recipe library, used for the category filter row
+  // Curated set of "main" categories for the filter row — cuisines & dish types only,
+  // so the row stays short and useful instead of listing every diet/speed tag.
+  const MAIN_CATEGORIES = [
+    "italian",
+    "mexican",
+    "japanese",
+    "asian",
+    "british",
+    "rice",
+    "pasta",
+    "noodles",
+    "salad",
+    "breakfast",
+    "vegetarian",
+  ];
+
   const allTags = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const r of recipes) for (const t of r.tags ?? []) counts[t] = (counts[t] ?? 0) + 1;
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([tag]) => tag);
+    const present = new Set<string>();
+    for (const r of recipes) for (const t of r.tags ?? []) present.add(t);
+    return MAIN_CATEGORIES.filter((tag) => present.has(tag));
   }, [recipes]);
 
   const sorted = [...recipes].sort((a, b) => {
