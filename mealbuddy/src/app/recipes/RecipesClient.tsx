@@ -32,6 +32,7 @@ const EMOJI_TO_CATEGORY: Record<string, IngredientCategory> = {
   "🌾": "pantry", "🍚": "pantry", "🍝": "pantry", "🥫": "pantry", "🫒": "pantry",
   "🧂": "pantry", "🌶️": "pantry", "🧄": "pantry", "🫙": "pantry", "🍜": "pantry",
   "🍯": "pantry", "🍁": "pantry", "🌿": "pantry", "🥢": "pantry",
+  "🍇": "produce",
 };
 
 function categorize(emoji: string): IngredientCategory {
@@ -86,6 +87,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
     "noodles",
     "salad",
     "breakfast",
+    "dessert",
     "vegetarian",
   ];
 
