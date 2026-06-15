@@ -5,11 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Ingredient, IngredientCategory } from "@/lib/types";
-import { CATEGORIES, EMOJI_SUGGESTIONS } from "@/lib/types";
+import { CATEGORIES, EMOJI_SUGGESTIONS, UNITS } from "@/lib/types";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { lookupBarcode } from "@/lib/barcodeUtils";
-
-const UNITS = ["g", "kg", "ml", "L", "tbsp", "tsp", "cups", "pcs", "bunch", "tin", "bag", "box"];
 
 interface Props {
   initialIngredients: Ingredient[];
@@ -25,15 +23,22 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [search, setSearch] = useState("");
 
-  // New ingredient form state
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: "",
     emoji: "🥦",
     category: "produce" as IngredientCategory,
     quantity: "",
     unit: "",
+    secondary_quantity: "",
+    secondary_unit: "",
     expires_at: "",
-  });
+  };
+
+  // Add/edit ingredient form state
+  const [form, setForm] = useState(emptyForm);
+
+  // Set when editing an existing ingredient (null = adding a new one)
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Set when the form was pre-filled from a barcode scan, so we can
   // show a hint in the Add sheet
@@ -49,18 +54,20 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
       if (!result) {
         toast.error("Couldn't find that product — add it manually");
         setScanHint(null);
-        setForm({ name: "", emoji: "🥦", category: "produce", quantity: "", unit: "", expires_at: "" });
+        setEditingId(null);
+        setForm(emptyForm);
         setShowAdd(true);
         return;
       }
 
+      setEditingId(null);
       setForm({
+        ...emptyForm,
         name: result.name,
         emoji: result.emoji,
         category: result.category,
         quantity: result.quantity != null ? String(result.quantity) : "",
         unit: result.unit ?? "",
-        expires_at: "",
       });
       setScanHint({ matched: result.matched, rawName: result.rawName });
       setShowAdd(true);
@@ -89,6 +96,8 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
         category: form.category,
         quantity: form.quantity ? parseFloat(form.quantity) : null,
         unit: form.unit || null,
+        secondary_quantity: form.secondary_quantity ? parseFloat(form.secondary_quantity) : null,
+        secondary_unit: form.secondary_unit || null,
         expires_at: form.expires_at || null,
       })
       .select()
@@ -99,10 +108,64 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
       return;
     }
     setIngredients((prev) => [...prev, data]);
-    setForm({ name: "", emoji: "🥦", category: "produce", quantity: "", unit: "", expires_at: "" });
+    setForm(emptyForm);
     setScanHint(null);
     setShowAdd(false);
     toast.success(`${form.emoji} ${form.name} added!`);
+  }
+
+  async function updateIngredient() {
+    if (!editingId || !form.name.trim()) return;
+    const { data, error } = await supabase
+      .from("ingredients")
+      .update({
+        name: form.name.trim(),
+        emoji: form.emoji,
+        category: form.category,
+        quantity: form.quantity ? parseFloat(form.quantity) : null,
+        unit: form.unit || null,
+        secondary_quantity: form.secondary_quantity ? parseFloat(form.secondary_quantity) : null,
+        secondary_unit: form.secondary_unit || null,
+        expires_at: form.expires_at || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", editingId)
+      .select()
+      .single();
+
+    if (error) {
+      toast.error(error.message || "Couldn't update ingredient");
+      return;
+    }
+    setIngredients((prev) => prev.map((i) => (i.id === editingId ? data : i)));
+    setForm(emptyForm);
+    setScanHint(null);
+    setEditingId(null);
+    setShowAdd(false);
+    toast.success(`${form.emoji} ${form.name} updated!`);
+  }
+
+  function openAdd() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setScanHint(null);
+    setShowAdd(true);
+  }
+
+  function openEdit(ing: Ingredient) {
+    setEditingId(ing.id);
+    setForm({
+      name: ing.name,
+      emoji: ing.emoji,
+      category: ing.category,
+      quantity: ing.quantity != null ? String(ing.quantity) : "",
+      unit: ing.unit ?? "",
+      secondary_quantity: ing.secondary_quantity != null ? String(ing.secondary_quantity) : "",
+      secondary_unit: ing.secondary_unit ?? "",
+      expires_at: ing.expires_at ?? "",
+    });
+    setScanHint(null);
+    setShowAdd(true);
   }
 
   // Live-sync ingredients across devices/family members
@@ -174,7 +237,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
           <button onClick={() => setShowScanner(true)} className="btn-secondary" title="Scan a barcode">
             📷 Scan
           </button>
-          <button onClick={() => setShowAdd(true)} className="btn-primary">
+          <button onClick={openAdd} className="btn-primary">
             + Add
           </button>
         </div>
@@ -235,14 +298,18 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        className="card px-4 py-3 flex items-center gap-3"
+                        onClick={() => openEdit(ing)}
+                        className="card px-4 py-3 flex items-center gap-3 active:scale-98 transition-transform cursor-pointer"
                       >
                         <span className="text-2xl">{ing.emoji}</span>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold truncate">{ing.name}</div>
-                          {(ing.quantity || ing.unit) && (
+                          {(ing.quantity || ing.unit || ing.secondary_quantity || ing.secondary_unit) && (
                             <div className="text-xs text-gray-400">
                               {ing.quantity} {ing.unit}
+                              {(ing.secondary_quantity || ing.secondary_unit) && (
+                                <span> · {ing.secondary_quantity} {ing.secondary_unit}</span>
+                              )}
                             </div>
                           )}
                           {ing.expires_at && (
@@ -253,7 +320,10 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
                           )}
                         </div>
                         <button
-                          onClick={() => deleteIngredient(ing.id, ing.name, ing.emoji)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteIngredient(ing.id, ing.name, ing.emoji);
+                          }}
                           className="text-gray-300 hover:text-red-400 transition-colors p-1 text-xl"
                         >
                           ×
@@ -280,6 +350,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
               onClick={() => {
                 setShowAdd(false);
                 setScanHint(null);
+                setEditingId(null);
               }}
             />
             <motion.div
@@ -290,7 +361,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
               className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-50 p-5 pb-10 space-y-4 max-h-[85vh] overflow-y-auto overscroll-contain"
             >
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-              <h2 className="text-xl font-display font-black">Add ingredient</h2>
+              <h2 className="text-xl font-display font-black">{editingId ? "Edit ingredient" : "Add ingredient"}</h2>
 
               {/* Barcode scan hint */}
               {scanHint && (
@@ -379,6 +450,36 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
                 </div>
               </div>
 
+              {/* Also equals (optional secondary unit) */}
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold mb-1.5">
+                    Also equals <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder="e.g. 6"
+                    value={form.secondary_quantity}
+                    onChange={(e) => setForm({ ...form, secondary_quantity: e.target.value })}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold mb-1.5">&nbsp;</label>
+                  <select
+                    className="input"
+                    value={form.secondary_unit}
+                    onChange={(e) => setForm({ ...form, secondary_unit: e.target.value })}
+                  >
+                    <option value="">—</option>
+                    {UNITS.map((u) => <option key={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 -mt-2">
+                e.g. 1 pack also equals 6 pieces, or 1 can also equals 500g. Skip this for things like curry roux where it doesn&apos;t apply.
+              </p>
+
               {/* Expiry */}
               <div>
                 <label className="block text-sm font-semibold mb-1.5">
@@ -393,12 +494,27 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
               </div>
 
               <button
-                onClick={addIngredient}
+                onClick={editingId ? updateIngredient : addIngredient}
                 disabled={!form.name.trim()}
                 className="btn-primary w-full"
               >
-                Add {form.emoji} {form.name || "ingredient"}
+                {editingId ? `Save ${form.emoji} ${form.name || "ingredient"}` : `Add ${form.emoji} ${form.name || "ingredient"}`}
               </button>
+
+              {editingId && (
+                <button
+                  onClick={() => {
+                    const target = ingredients.find((i) => i.id === editingId);
+                    if (target) deleteIngredient(target.id, target.name, target.emoji);
+                    setShowAdd(false);
+                    setEditingId(null);
+                    setForm(emptyForm);
+                  }}
+                  className="w-full text-center text-sm text-red-400 font-semibold py-1"
+                >
+                  Remove this ingredient
+                </button>
+              )}
             </motion.div>
           </>
         )}
