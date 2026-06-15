@@ -16,6 +16,8 @@ interface Props {
 
 function isOwned(name: string, owned: string[]): boolean {
   const lower = name.toLowerCase();
+  // Water is always available — no need to track or shop for it
+  if (lower.includes("water")) return true;
   return owned.some((o) => lower.includes(o) || o.includes(lower));
 }
 
