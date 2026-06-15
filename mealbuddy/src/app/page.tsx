@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import type { Recipe } from "@/lib/types";
 
+type RecipeMatchSource = Pick<Recipe, "id" | "title" | "emoji" | "ingredients">;
+
 // How many days out counts as "expiring soon" (includes already-expired items)
 const EXPIRY_WINDOW_DAYS = 3;
 // Max number of expiring items to surface on the home screen
@@ -26,7 +28,7 @@ function expiryLabel(diffDays: number): string {
   return `in ${diffDays} days`;
 }
 
-function findRecipeMatches(ingredientName: string, recipes: Recipe[], limit: number) {
+function findRecipeMatches(ingredientName: string, recipes: RecipeMatchSource[], limit: number) {
   const lower = ingredientName.toLowerCase().trim();
   const matches: { id: string; title: string; emoji: string }[] = [];
   for (const r of recipes) {
