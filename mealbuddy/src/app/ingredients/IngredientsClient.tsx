@@ -5,18 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Ingredient, IngredientCategory } from "@/lib/types";
-import { CATEGORIES } from "@/lib/types";
-
-// Common emoji suggestions per category
-const EMOJI_SUGGESTIONS: Record<string, string[]> = {
-  produce: ["🥦", "🥕", "🍅", "🧅", "🧄", "🥔", "🍋", "🍎", "🫑", "🥒", "🌽", "🥬"],
-  meat: ["🥩", "🍗", "🥓", "🐟", "🍤", "🦐", "🥚"],
-  dairy: ["🥛", "🧀", "🧈", "🫙"],
-  pantry: ["🫙", "🌾", "🍚", "🍝", "🥫", "🫒", "🧂", "🌶️", "🧄"],
-  frozen: ["🧊", "🍦", "🥶"],
-  bakery: ["🍞", "🥖", "🥐", "🫓"],
-  other: ["🛒", "🥤", "🧃", "☕"],
-};
+import { CATEGORIES, EMOJI_SUGGESTIONS } from "@/lib/types";
+import BarcodeScanner from "@/components/BarcodeScanner";
+import { lookupBarcode } from "@/lib/barcodeUtils";
 
 const UNITS = ["g", "kg", "ml", "L", "tbsp", "tsp", "cups", "pcs", "bunch", "tin", "bag", "box"];
 
@@ -30,6 +21,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
   const supabase = createClient();
   const [ingredients, setIngredients] = useState<Ingredient[]>(initialIngredients);
   const [showAdd, setShowAdd] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [search, setSearch] = useState("");
 
@@ -42,6 +34,48 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
     unit: "",
     expires_at: "",
   });
+
+  // Set when the form was pre-filled from a barcode scan, so we can
+  // show a hint in the Add sheet
+  const [scanHint, setScanHint] = useState<{ matched: boolean; rawName: string } | null>(null);
+
+  async function handleBarcodeDetected(barcode: string) {
+    setShowScanner(false);
+    const loadingId = toast.loading("Looking up product…");
+    try {
+      const result = await lookupBarcode(barcode);
+      toast.dismiss(loadingId);
+
+      if (!result) {
+        toast.error("Couldn't find that product — add it manually");
+        setScanHint(null);
+        setForm({ name: "", emoji: "🥦", category: "produce", quantity: "", unit: "", expires_at: "" });
+        setShowAdd(true);
+        return;
+      }
+
+      setForm({
+        name: result.name,
+        emoji: result.emoji,
+        category: result.category,
+        quantity: result.quantity != null ? String(result.quantity) : "",
+        unit: result.unit ?? "",
+        expires_at: "",
+      });
+      setScanHint({ matched: result.matched, rawName: result.rawName });
+      setShowAdd(true);
+      toast.success(
+        result.matched
+          ? `${result.emoji} Matched: ${result.name}`
+          : `${result.emoji} Found: ${result.name} — check it looks right!`
+      );
+    } catch {
+      toast.dismiss(loadingId);
+      toast.error("Lookup failed — add it manually");
+      setScanHint(null);
+      setShowAdd(true);
+    }
+  }
 
   async function addIngredient() {
     if (!form.name.trim()) return;
@@ -66,6 +100,7 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
     }
     setIngredients((prev) => [...prev, data]);
     setForm({ name: "", emoji: "🥦", category: "produce", quantity: "", unit: "", expires_at: "" });
+    setScanHint(null);
     setShowAdd(false);
     toast.success(`${form.emoji} ${form.name} added!`);
   }
@@ -135,9 +170,14 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
           <h1 className="text-2xl font-display font-black">🥦 Ingredients</h1>
           <p className="text-sm text-gray-500">{ingredients.length} items tracked</p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="btn-primary">
-          + Add
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowScanner(true)} className="btn-secondary" title="Scan a barcode">
+            📷 Scan
+          </button>
+          <button onClick={() => setShowAdd(true)} className="btn-primary">
+            + Add
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -237,7 +277,10 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/40 z-40"
-              onClick={() => setShowAdd(false)}
+              onClick={() => {
+                setShowAdd(false);
+                setScanHint(null);
+              }}
             />
             <motion.div
               initial={{ y: "100%" }}
@@ -248,6 +291,19 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
             >
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
               <h2 className="text-xl font-display font-black">Add ingredient</h2>
+
+              {/* Barcode scan hint */}
+              {scanHint && (
+                <div
+                  className={`rounded-xl px-3 py-2 text-sm ${
+                    scanHint.matched ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {scanHint.matched
+                    ? "📷 Matched from scan — double check before saving."
+                    : `📷 Scanned "${scanHint.rawName}" — name simplified, edit if needed.`}
+                </div>
+              )}
 
               {/* Emoji & name row */}
               <div className="flex gap-3">
@@ -347,6 +403,11 @@ export default function IngredientsClient({ initialIngredients, familyId, userId
           </>
         )}
       </AnimatePresence>
+
+      {/* Barcode scanner */}
+      {showScanner && (
+        <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setShowScanner(false)} />
+      )}
     </div>
   );
 }
