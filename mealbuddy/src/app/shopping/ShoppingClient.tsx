@@ -1,14 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import type { ShoppingItem, IngredientCategory } from "@/lib/types";
+import type { ShoppingItem, StapleItem, PlannedMealForShopping, IngredientCategory } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
+
+interface PantryIngredient {
+  id: string;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+}
 
 interface Props {
   initialItems: ShoppingItem[];
+  initialStaples: StapleItem[];
+  mealPlans: PlannedMealForShopping[];
+  pantryIngredients: PantryIngredient[];
   familyId: string;
   userId: string;
 }
@@ -31,9 +41,28 @@ const QUICK_ADD: [string, string, IngredientCategory][] = [
   ["🧀", "Cheese", "dairy"], ["🥩", "Chicken", "meat"], ["🍅", "Tomatoes", "produce"], ["🥦", "Broccoli", "produce"],
 ];
 
-export default function ShoppingClient({ initialItems, familyId, userId }: Props) {
+function normalize(s: string) {
+  return s.toLowerCase().trim();
+}
+
+// Roughly checks whether we already have enough of an ingredient at home
+function inPantry(name: string, qty: number | null, unit: string | null, pantry: PantryIngredient[]) {
+  const n = normalize(name);
+  const match = pantry.find((p) => {
+    const pn = normalize(p.name);
+    return pn === n || pn.includes(n) || n.includes(pn);
+  });
+  if (!match) return false;
+  if (qty == null) return true; // we have some, and the recipe doesn't say how much
+  if (match.quantity == null) return true; // we have it, assume it's enough
+  if (match.unit && unit && normalize(match.unit) !== normalize(unit)) return true; // can't compare units, assume fine
+  return match.quantity >= qty;
+}
+
+export default function ShoppingClient({ initialItems, initialStaples, mealPlans, pantryIngredients, familyId, userId }: Props) {
   const supabase = createClient();
   const [items, setItems] = useState<ShoppingItem[]>(initialItems);
+  const [staples, setStaples] = useState<StapleItem[]>(initialStaples);
   const [newItem, setNewItem] = useState("");
   const [newEmoji, setNewEmoji] = useState("🛒");
   const [newCategory, setNewCategory] = useState<IngredientCategory>("other");
@@ -42,9 +71,15 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
   const [newExpiry, setNewExpiry] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [showStaples, setShowStaples] = useState(false);
+  const [newStapleName, setNewStapleName] = useState("");
+  const [newStapleEmoji, setNewStapleEmoji] = useState("🛒");
+  const [newStapleCategory, setNewStapleCategory] = useState<IngredientCategory>("other");
 
   const unchecked = items.filter((i) => !i.checked);
   const checked = items.filter((i) => i.checked);
+  const plannedMeals = useMemo(() => mealPlans.filter((p) => p.recipe), [mealPlans]);
 
   // Live-sync the shopping list across devices/family members
   useEffect(() => {
@@ -184,6 +219,115 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
     }
   }
 
+  // One-tap: pull every ingredient needed for this week's planned meals,
+  // skip anything already in the fridge/pantry or already on the list
+  async function generateFromMealPlan() {
+    if (plannedMeals.length === 0) {
+      toast("No recipes planned this week yet — visit the Planner! 📅");
+      return;
+    }
+    setBusy("plan");
+    try {
+      type Agg = { name: string; emoji: string; quantity: number | null; unit: string | null };
+      const aggregated = new Map<string, Agg>();
+
+      for (const plan of plannedMeals) {
+        const recipe = plan.recipe!;
+        const ratio = recipe.servings ? plan.servings / recipe.servings : 1;
+        for (const ing of recipe.ingredients ?? []) {
+          const key = `${normalize(ing.name)}|${normalize(ing.unit ?? "")}`;
+          const scaledQty = ing.quantity != null ? Math.round(ing.quantity * ratio * 100) / 100 : null;
+          const existing = aggregated.get(key);
+          if (existing) {
+            if (scaledQty != null) existing.quantity = (existing.quantity ?? 0) + scaledQty;
+          } else {
+            aggregated.set(key, { name: ing.name, emoji: ing.emoji || "🛒", quantity: scaledQty, unit: ing.unit ?? null });
+          }
+        }
+      }
+
+      const toAdd = Array.from(aggregated.values()).filter((ing) => {
+        if (inPantry(ing.name, ing.quantity, ing.unit, pantryIngredients)) return false;
+        if (unchecked.some((i) => normalize(i.name) === normalize(ing.name))) return false;
+        return true;
+      });
+
+      if (toAdd.length === 0) {
+        toast.success("You've already got everything for this week's plan! 🎉");
+        return;
+      }
+
+      const rows = toAdd.map((ing) => ({
+        family_id: familyId,
+        added_by: userId,
+        name: ing.name,
+        emoji: ing.emoji,
+        category: "other" as IngredientCategory,
+        quantity: ing.quantity,
+        unit: ing.unit,
+      }));
+
+      const { data, error } = await supabase.from("shopping_items").insert(rows).select();
+      if (error) { toast.error(error.message || "Couldn't generate the list"); return; }
+      setItems((prev) => [...((data ?? []) as ShoppingItem[]), ...prev]);
+      toast.success(`Added ${toAdd.length} item${toAdd.length === 1 ? "" : "s"} from this week's plan! 🧾`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // One-tap: add the configured monthly staples to the shopping list
+  async function addStaplesToList() {
+    if (staples.length === 0) {
+      toast("Add some staples first using the list below 🧺");
+      setShowStaples(true);
+      return;
+    }
+    setBusy("staples");
+    try {
+      const toAdd = staples.filter((s) => !unchecked.some((i) => normalize(i.name) === normalize(s.name)));
+      if (toAdd.length === 0) {
+        toast.success("Your staples are already on the list! ✅");
+        return;
+      }
+      const rows = toAdd.map((s) => ({
+        family_id: familyId,
+        added_by: userId,
+        name: s.name,
+        emoji: s.emoji,
+        category: s.category,
+        quantity: s.quantity,
+        unit: s.unit,
+      }));
+      const { data, error } = await supabase.from("shopping_items").insert(rows).select();
+      if (error) { toast.error(error.message || "Couldn't add staples"); return; }
+      setItems((prev) => [...((data ?? []) as ShoppingItem[]), ...prev]);
+      toast.success(`Added ${toAdd.length} staple${toAdd.length === 1 ? "" : "s"} to your list! 🧺`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function addStaple() {
+    const name = newStapleName.trim();
+    if (!name) return;
+    const { data, error } = await supabase
+      .from("staple_items")
+      .insert({ family_id: familyId, name, emoji: newStapleEmoji, category: newStapleCategory })
+      .select()
+      .single();
+    if (error) { toast.error(error.message || "Couldn't add staple"); return; }
+    setStaples((prev) => [...prev, data as StapleItem].sort((a, b) => a.name.localeCompare(b.name)));
+    setNewStapleName("");
+    setNewStapleEmoji("🛒");
+    setNewStapleCategory("other");
+  }
+
+  async function removeStaple(id: string) {
+    await supabase.from("staple_items").delete().eq("id", id);
+    setStaples((prev) => prev.filter((s) => s.id !== id));
+  }
+
   return (
     <div className="p-5 space-y-4">
       <div className="pt-4 flex items-center justify-between">
@@ -194,6 +338,122 @@ export default function ShoppingClient({ initialItems, familyId, userId }: Props
         <button onClick={shareList} className="btn-secondary text-sm py-2">
           Share 📤
         </button>
+      </div>
+
+      {/* One-tap shopping helpers */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={generateFromMealPlan}
+          disabled={busy !== null}
+          className="card p-3 text-left active:scale-98 transition-transform disabled:opacity-60"
+        >
+          <div className="text-2xl mb-1">🧾</div>
+          <div className="font-bold text-sm leading-tight">From this week&apos;s plan</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {plannedMeals.length} meal{plannedMeals.length === 1 ? "" : "s"} planned
+          </div>
+        </button>
+        <button
+          onClick={addStaplesToList}
+          disabled={busy !== null}
+          className="card p-3 text-left active:scale-98 transition-transform disabled:opacity-60"
+        >
+          <div className="text-2xl mb-1">🧺</div>
+          <div className="font-bold text-sm leading-tight">Add staples</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {staples.length} item{staples.length === 1 ? "" : "s"} configured
+          </div>
+        </button>
+      </div>
+
+      {/* Staples manager */}
+      <div>
+        <button
+          onClick={() => setShowStaples((s) => !s)}
+          className="text-sm font-semibold text-purple-500"
+        >
+          {showStaples ? "− Hide staples list" : "⚙️ Manage monthly staples"}
+        </button>
+        <AnimatePresence>
+          {showStaples && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="card mt-2 p-3 space-y-3 overflow-hidden"
+            >
+              <p className="text-xs text-gray-500">
+                Things you buy every month — add them here once, then tap &ldquo;Add staples&rdquo; above whenever you need them.
+              </p>
+
+              {staples.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {staples.map((s) => (
+                    <span
+                      key={s.id}
+                      className="badge bg-purple-50 text-purple-700 flex items-center gap-1.5"
+                    >
+                      {s.emoji} {s.name}
+                      <button onClick={() => removeStaple(s.id)} className="text-purple-300 hover:text-red-400 font-bold">
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <input
+                  className="w-14 text-2xl text-center border-2 border-purple-100 rounded-xl focus:border-purple-400 focus:outline-none"
+                  value={newStapleEmoji}
+                  onChange={(e) => setNewStapleEmoji(e.target.value)}
+                  placeholder="🛒"
+                />
+                <input
+                  className="flex-1 border-2 border-purple-100 rounded-xl px-3 py-2 focus:border-purple-400 focus:outline-none font-medium"
+                  placeholder="Add a staple…"
+                  value={newStapleName}
+                  onChange={(e) => setNewStapleName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addStaple()}
+                />
+                <button onClick={addStaple} disabled={!newStapleName.trim()} className="btn-primary py-2 px-4">
+                  +
+                </button>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {(EMOJI_SUGGESTIONS[newStapleCategory] ?? []).map((e) => (
+                  <button
+                    key={e}
+                    onClick={() => setNewStapleEmoji(e)}
+                    className={`text-xl flex-shrink-0 p-1.5 rounded-lg transition-all ${
+                      newStapleEmoji === e ? "bg-purple-100 scale-110" : "hover:bg-gray-100"
+                    }`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => {
+                      setNewStapleCategory(c.value);
+                      setNewStapleEmoji(EMOJI_SUGGESTIONS[c.value]?.[0] ?? newStapleEmoji);
+                    }}
+                    className={`badge transition-all text-sm ${
+                      newStapleCategory === c.value ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {c.emoji} {c.label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Add item input */}
