@@ -22,21 +22,23 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
         if (cancelled) return;
 
-        html5QrCode = new Html5Qrcode(REGION_ID);
+        html5QrCode = new Html5Qrcode(REGION_ID, {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE,
+          ],
+          verbose: false,
+        });
 
         await html5QrCode.start(
           { facingMode: "environment" },
           {
             fps: 10,
             qrbox: { width: 250, height: 150 },
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.EAN_13,
-              Html5QrcodeSupportedFormats.EAN_8,
-              Html5QrcodeSupportedFormats.UPC_A,
-              Html5QrcodeSupportedFormats.UPC_E,
-              Html5QrcodeSupportedFormats.CODE_128,
-              Html5QrcodeSupportedFormats.QR_CODE,
-            ],
           },
           (decodedText) => {
             if (detectedRef.current) return;
