@@ -173,3 +173,15 @@ export const CATEGORIES: {
   { value: "bakery", label: "Bakery", emoji: "🍞" },
   { value: "other", label: "Other", emoji: "🛒" },
 ];
+
+// Common emoji suggestions per category (used by Add Ingredient form
+// and as a fallback when guessing an emoji for a scanned product)
+export const EMOJI_SUGGESTIONS: Record<IngredientCategory, string[]> = {
+  produce: ["🥦", "🥕", "🍅", "🧅", "🧄", "🥔", "🍋", "🍎", "🫑", "🥒", "🌽", "🥬"],
+  meat: ["🥩", "🍗", "🥓", "🐟", "🍤", "🦐", "🥚"],
+  dairy: ["🥛", "🧀", "🧈", "🫙"],
+  pantry: ["🫙", "🌾", "🍚", "🍝", "🥫", "🫒", "🧂", "🌶️", "🧄"],
+  frozen: ["🧊", "🍦", "🥶"],
+  bakery: ["🍞", "🥖", "🥐", "🫓"],
+  other: ["🛒", "🥤", "🧃", "☕"],
+};
