@@ -111,6 +111,28 @@ export interface ShoppingItem {
   created_at: string;
 }
 
+// A monthly "staples" item — things you buy regularly, added to the
+// shopping list with one tap (e.g. milk, bread, eggs)
+export interface StapleItem {
+  id: string;
+  family_id: string;
+  name: string;
+  emoji: string;
+  category: IngredientCategory;
+  quantity: number | null;
+  unit: string | null;
+  created_at: string;
+}
+
+// Slim shape for a planned dinner used to auto-generate the shopping list
+export interface PlannedMealForShopping {
+  id: string;
+  planned_for: string;
+  servings: number;
+  special: SpecialMeal | null;
+  recipe: Pick<Recipe, "id" | "title" | "emoji" | "servings" | "ingredients"> | null;
+}
+
 export interface CookLog {
   id: string;
   family_id: string;
