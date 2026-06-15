@@ -40,6 +40,10 @@ export interface Ingredient {
   category: IngredientCategory;
   quantity: number | null;
   unit: string | null;
+  // Optional second way of describing the same amount of stock,
+  // e.g. quantity=1/unit="pack" + secondary_quantity=6/secondary_unit="pieces"
+  secondary_quantity?: number | null;
+  secondary_unit?: string | null;
   expires_at: string | null;
   added_by: string | null;
   created_at: string;
@@ -158,6 +162,25 @@ export const SPECIAL_MEALS: {
   { value: "takeaway", label: "Takeaway", emoji: "🥡" },
   { value: "eating_out", label: "Eating Out", emoji: "🍽️" },
   { value: "microwave", label: "Microwave Meal", emoji: "🍱" },
+];
+
+// Units offered when adding/editing an ingredient's quantity
+export const UNITS = [
+  "g",
+  "kg",
+  "ml",
+  "L",
+  "tbsp",
+  "tsp",
+  "cups",
+  "pieces",
+  "pcs",
+  "bunch",
+  "tin",
+  "can",
+  "pack",
+  "bag",
+  "box",
 ];
 
 export const CATEGORIES: {
