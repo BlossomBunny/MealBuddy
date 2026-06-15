@@ -229,6 +229,8 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
         const recipe = plan.recipe!;
         const ratio = recipe.servings ? plan.servings / recipe.servings : 1;
         for (const ing of recipe.ingredients ?? []) {
+          // Water is always available — never add it to the shopping list
+          if (normalize(ing.name).includes("water")) continue;
           const key = `${normalize(ing.name)}|${normalize(ing.unit ?? "")}`;
           const scaledQty = ing.quantity != null ? Math.round(ing.quantity * ratio * 100) / 100 : null;
           const existing = aggregated.get(key);
