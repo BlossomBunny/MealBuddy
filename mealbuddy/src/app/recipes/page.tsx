@@ -25,7 +25,7 @@ export default async function RecipesPage() {
       .order("title"),
     supabase
       .from("ingredients")
-      .select("name")
+      .select("id, name, quantity, unit, secondary_quantity, secondary_unit")
       .eq("family_id", profile.family_id),
   ]);
 
@@ -33,6 +33,7 @@ export default async function RecipesPage() {
     <RecipesClient
       initialRecipes={recipes ?? []}
       ownedIngredientNames={(ingredients ?? []).map((i) => i.name.toLowerCase())}
+      ownedIngredients={ingredients ?? []}
       familyId={profile.family_id}
       userId={user.id}
     />

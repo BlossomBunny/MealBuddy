@@ -4,12 +4,24 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
-import type { Recipe, IngredientCategory } from "@/lib/types";
+import type { Recipe, RecipeIngredient, IngredientCategory } from "@/lib/types";
+import { UNITS } from "@/lib/types";
 import confetti from "canvas-confetti";
+
+// Slim shape of a pantry ingredient, used to deduct stock after cooking
+interface PantryItem {
+  id: string;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  secondary_quantity: number | null;
+  secondary_unit: string | null;
+}
 
 interface Props {
   initialRecipes: Recipe[];
   ownedIngredientNames: string[];
+  ownedIngredients: PantryItem[];
   familyId: string;
   userId: string;
 }
@@ -19,6 +31,25 @@ function isOwned(name: string, owned: string[]): boolean {
   // Water is always available — no need to track or shop for it
   if (lower.includes("water")) return true;
   return owned.some((o) => lower.includes(o) || o.includes(lower));
+}
+
+// Loosely compare two unit strings — case-insensitive and tolerant of a
+// trailing "s" (e.g. "can" vs "cans", "piece" vs "pieces")
+function unitsMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  const norm = (u: string) => u.trim().toLowerCase().replace(/s$/, "");
+  return norm(a) === norm(b);
+}
+
+// Find the pantry item that best matches a recipe ingredient's name
+function findPantryMatch(name: string, pantry: PantryItem[]): PantryItem | null {
+  const lower = name.toLowerCase();
+  return (
+    pantry.find((p) => {
+      const pLower = p.name.toLowerCase();
+      return lower.includes(pLower) || pLower.includes(lower);
+    }) ?? null
+  );
 }
 
 interface MatchInfo {
@@ -76,13 +107,19 @@ function formatQty(n: number): string {
   return `${rounded}`;
 }
 
-export default function RecipesClient({ initialRecipes, ownedIngredientNames, familyId, userId }: Props) {
+export default function RecipesClient({ initialRecipes, ownedIngredientNames, ownedIngredients, familyId, userId }: Props) {
   const supabase = createClient();
-  const [recipes] = useState<Recipe[]>(initialRecipes);
+  const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
+  const [pantry, setPantry] = useState<PantryItem[]>(ownedIngredients);
   const [filter, setFilter] = useState<"all" | "can-make">("all");
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [cookingStep, setCookingStep] = useState<number | null>(null);
   const [showRating, setShowRating] = useState(false);
+  const [showPantryUpdate, setShowPantryUpdate] = useState(false);
+  const [usedAmounts, setUsedAmounts] = useState<Record<number, string>>({});
+  const [updatingPantry, setUpdatingPantry] = useState(false);
+  const [editingIngredients, setEditingIngredients] = useState<RecipeIngredient[] | null>(null);
+  const [savingIngredients, setSavingIngredients] = useState(false);
   const [surpriseRecipe, setSurpriseRecipe] = useState<Recipe | null>(null);
   const [targetServings, setTargetServings] = useState(4);
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -192,6 +229,117 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
     setShowRating(false);
     setCookingStep(null);
     setSelectedRecipe(null);
+  }
+
+  // Ingredients to ask about when finishing a recipe — everything except water,
+  // which is always available and never tracked
+  const pantryUpdateIngredients = useMemo(() => {
+    if (!selectedRecipe) return [];
+    return selectedRecipe.ingredients.filter((ing) => !ing.name.toLowerCase().includes("water"));
+  }, [selectedRecipe]);
+
+  function openPantryUpdate() {
+    const scale = targetServings / (selectedRecipe?.servings || 1);
+    const initial: Record<number, string> = {};
+    pantryUpdateIngredients.forEach((ing, i) => {
+      initial[i] = ing.quantity != null ? String(Math.round(ing.quantity * scale * 100) / 100) : "";
+    });
+    setUsedAmounts(initial);
+    setShowPantryUpdate(true);
+  }
+
+  // Decrement pantry stock based on what was actually used, then move to rating
+  async function applyPantryDeductions() {
+    setUpdatingPantry(true);
+    try {
+      const updates: { id: string; quantity?: number; secondary_quantity?: number }[] = [];
+
+      pantryUpdateIngredients.forEach((ing, i) => {
+        const amt = parseFloat(usedAmounts[i]);
+        if (!amt || amt <= 0) return;
+        const match = findPantryMatch(ing.name, pantry);
+        if (!match) return;
+        const unit = ing.unit || "";
+        if (unitsMatch(match.unit, unit)) {
+          updates.push({ id: match.id, quantity: Math.max(0, (match.quantity ?? 0) - amt) });
+        } else if (unitsMatch(match.secondary_unit, unit)) {
+          updates.push({ id: match.id, secondary_quantity: Math.max(0, (match.secondary_quantity ?? 0) - amt) });
+        }
+        // If units don't line up with anything we track, leave the pantry alone —
+        // the user can adjust it manually on the Ingredients page.
+      });
+
+      for (const u of updates) {
+        const patch: Record<string, number> = {};
+        if (u.quantity !== undefined) patch.quantity = u.quantity;
+        if (u.secondary_quantity !== undefined) patch.secondary_quantity = u.secondary_quantity;
+        await supabase.from("ingredients").update(patch).eq("id", u.id);
+      }
+
+      if (updates.length > 0) {
+        setPantry((prev) =>
+          prev.map((p) => {
+            const u = updates.find((x) => x.id === p.id);
+            if (!u) return p;
+            return {
+              ...p,
+              quantity: u.quantity !== undefined ? u.quantity : p.quantity,
+              secondary_quantity: u.secondary_quantity !== undefined ? u.secondary_quantity : p.secondary_quantity,
+            };
+          })
+        );
+        toast.success("Pantry updated! 📦");
+      }
+    } finally {
+      setUpdatingPantry(false);
+      setShowPantryUpdate(false);
+      setShowRating(true);
+    }
+  }
+
+  function skipPantryUpdate() {
+    setShowPantryUpdate(false);
+    setShowRating(true);
+  }
+
+  // ── Recipe ingredient editing ─────────────────────────────
+  function openIngredientEditor() {
+    if (!selectedRecipe) return;
+    setEditingIngredients(selectedRecipe.ingredients.map((ing) => ({ ...ing })));
+  }
+
+  function updateEditingIngredient(i: number, patch: Partial<RecipeIngredient>) {
+    setEditingIngredients((prev) => (prev ? prev.map((ing, idx) => (idx === i ? { ...ing, ...patch } : ing)) : prev));
+  }
+
+  function removeEditingIngredient(i: number) {
+    setEditingIngredients((prev) => (prev ? prev.filter((_, idx) => idx !== i) : prev));
+  }
+
+  function addEditingIngredient() {
+    setEditingIngredients((prev) => (prev ? [...prev, { name: "", quantity: null, unit: "", emoji: "🛒" }] : prev));
+  }
+
+  async function saveIngredientEdits() {
+    if (!selectedRecipe || !editingIngredients) return;
+    setSavingIngredients(true);
+    try {
+      const cleaned = editingIngredients
+        .map((ing) => ({ ...ing, name: ing.name.trim() }))
+        .filter((ing) => ing.name.length > 0);
+
+      const { error } = await supabase.from("recipes").update({ ingredients: cleaned }).eq("id", selectedRecipe.id);
+      if (error) {
+        toast.error(error.message || "Couldn't save changes");
+        return;
+      }
+      setRecipes((prev) => prev.map((r) => (r.id === selectedRecipe.id ? { ...r, ingredients: cleaned } : r)));
+      setSelectedRecipe((prev) => (prev ? { ...prev, ingredients: cleaned } : prev));
+      setEditingIngredients(null);
+      toast.success("Recipe updated! ✏️");
+    } finally {
+      setSavingIngredients(false);
+    }
   }
 
   const steps = selectedRecipe?.steps ?? [];
@@ -474,7 +622,15 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                   };
                   return (
                     <div>
-                      <h3 className="font-display font-black text-lg mb-3">🛒 Ingredients</h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-display font-black text-lg">🛒 Ingredients</h3>
+                        <button
+                          onClick={openIngredientEditor}
+                          className="text-xs font-bold text-purple-500 bg-purple-50 px-3 py-1.5 rounded-full"
+                        >
+                          ✏️ Edit
+                        </button>
+                      </div>
                       <div className="space-y-2">{selectedRecipe.ingredients.map(renderRow)}</div>
                     </div>
                   );
@@ -508,7 +664,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
 
       {/* Step-by-step cooking mode */}
       <AnimatePresence>
-        {selectedRecipe && cookingStep !== null && !showRating && (
+        {selectedRecipe && cookingStep !== null && !showRating && !showPantryUpdate && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-purple-600 z-50 flex flex-col p-6"
@@ -566,13 +722,69 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                 </button>
               ) : (
                 <button
-                  onClick={() => setShowRating(true)}
+                  onClick={openPantryUpdate}
                   className="bg-white text-purple-600 font-display font-black text-xl w-full py-4 rounded-2xl shadow-lg"
                 >
                   🎉 I cooked it!
                 </button>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Update pantry after cooking */}
+      <AnimatePresence>
+        {showPantryUpdate && selectedRecipe && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+              transition={{ type: "spring", damping: 22, stiffness: 280 }}
+              className="bg-white rounded-t-3xl sm:rounded-3xl p-5 w-full max-w-md mx-auto sm:mx-4 max-h-[85vh] overflow-y-auto"
+            >
+              <h2 className="text-xl font-display font-black">📦 Update your pantry</h2>
+              <p className="text-sm text-gray-500 mt-0.5 mb-4">
+                How much did you actually use? We'll take it off your ingredients list.
+              </p>
+              <div className="space-y-2">
+                {pantryUpdateIngredients.map((ing, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2 rounded-xl bg-gray-50">
+                    <span className="text-xl shrink-0">{ing.emoji}</span>
+                    <span className="flex-1 font-medium truncate">{ing.name}</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={usedAmounts[i] ?? ""}
+                      onChange={(e) => setUsedAmounts((prev) => ({ ...prev, [i]: e.target.value }))}
+                      className="w-16 text-right input py-1.5 px-2 text-sm"
+                    />
+                    <span className="text-xs text-gray-400 w-10 shrink-0">{ing.unit || ""}</span>
+                  </div>
+                ))}
+                {pantryUpdateIngredients.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-2">Nothing to track for this recipe.</p>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                Tip: used less than the recipe says? Just change the number — even halves like 0.5 are fine.
+              </p>
+              <div className="mt-4 space-y-2">
+                <button
+                  onClick={applyPantryDeductions}
+                  disabled={updatingPantry}
+                  className="btn-primary w-full disabled:opacity-60"
+                >
+                  {updatingPantry ? "Updating…" : "✅ Update pantry"}
+                </button>
+                <button onClick={skipPantryUpdate} className="w-full py-2 text-sm text-gray-400 underline">
+                  Skip — don't change my pantry
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -606,6 +818,100 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit recipe ingredients */}
+      <AnimatePresence>
+        {editingIngredients && selectedRecipe && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-[60]"
+              onClick={() => setEditingIngredients(null)}
+            />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-[70] max-h-[90vh] overflow-y-auto"
+            >
+              <div className="sticky top-0 bg-white pt-4 px-5 pb-3 z-10 border-b border-gray-100">
+                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+                <h2 className="text-xl font-display font-black">✏️ Edit ingredients</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Fix amounts so they match what you really use — e.g. 3 blocks of roux instead of 4.
+                </p>
+              </div>
+
+              <div className="p-5 space-y-3">
+                {editingIngredients.map((ing, i) => (
+                  <div key={i} className="card p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={ing.emoji}
+                        onChange={(e) => updateEditingIngredient(i, { emoji: e.target.value })}
+                        className="input w-12 text-center px-1"
+                        aria-label="Emoji"
+                      />
+                      <input
+                        value={ing.name}
+                        onChange={(e) => updateEditingIngredient(i, { name: e.target.value })}
+                        className="input flex-1"
+                        placeholder="Ingredient name"
+                      />
+                      <button
+                        onClick={() => removeEditingIngredient(i)}
+                        className="text-gray-300 hover:text-red-400 text-2xl leading-none px-1"
+                        aria-label="Remove ingredient"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        step="any"
+                        value={ing.quantity ?? ""}
+                        onChange={(e) =>
+                          updateEditingIngredient(i, { quantity: e.target.value === "" ? null : parseFloat(e.target.value) })
+                        }
+                        placeholder="Qty"
+                        className="input flex-1"
+                      />
+                      <select
+                        value={ing.unit ?? ""}
+                        onChange={(e) => updateEditingIngredient(i, { unit: e.target.value })}
+                        className="input flex-1"
+                      >
+                        <option value="">No unit</option>
+                        {UNITS.map((u) => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  onClick={addEditingIngredient}
+                  className="w-full py-2.5 rounded-2xl font-bold text-purple-600 bg-purple-50"
+                >
+                  + Add ingredient
+                </button>
+
+                <button
+                  onClick={saveIngredientEdits}
+                  disabled={savingIngredients}
+                  className="btn-primary w-full disabled:opacity-60"
+                >
+                  {savingIngredients ? "Saving…" : "💾 Save changes"}
+                </button>
+                <button onClick={() => setEditingIngredients(null)} className="w-full py-2 text-sm text-gray-400 underline">
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
