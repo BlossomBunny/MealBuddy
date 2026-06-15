@@ -37,18 +37,13 @@ export default async function ShoppingPage() {
 
   const weekDates = getWeekDates();
 
-  const [{ data: items }, { data: staples }, { data: mealPlans }, { data: ingredients }] = await Promise.all([
+  const [{ data: items }, { data: mealPlans }, { data: ingredients }] = await Promise.all([
     supabase
       .from("shopping_items")
       .select("*")
       .eq("family_id", profile.family_id)
       .order("checked")
       .order("created_at", { ascending: false }),
-    supabase
-      .from("staple_items")
-      .select("*")
-      .eq("family_id", profile.family_id)
-      .order("name"),
     supabase
       .from("meal_plan")
       .select("id, planned_for, servings, special, recipe:recipes(id, title, emoji, servings, ingredients)")
@@ -65,7 +60,6 @@ export default async function ShoppingPage() {
   return (
     <ShoppingClient
       initialItems={items ?? []}
-      initialStaples={staples ?? []}
       mealPlans={(mealPlans as any) ?? []}
       pantryIngredients={ingredients ?? []}
       familyId={profile.family_id}
