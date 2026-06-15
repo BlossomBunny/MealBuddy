@@ -181,7 +181,7 @@ export default async function HomePage() {
       <div className="space-y-3">
         <h2 className="text-lg font-display font-black">What would you like to do?</h2>
         <Link href="/ingredients" className="card p-4 flex items-center gap-4 active:scale-98 transition-transform">
-          <div className="text-4xl">🧅</div>
+          <div className="text-4xl">🥦</div>
           <div>
             <div className="font-bold">Update ingredients</div>
             <div className="text-sm text-gray-500">Track what&apos;s in your fridge & pantry</div>
