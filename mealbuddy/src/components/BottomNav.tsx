@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/", emoji: "🏠", label: "Home" },
+  { href: "/planner", emoji: "📅", label: "Planner" },
   { href: "/ingredients", emoji: "🥦", label: "Fridge" },
   { href: "/recipes", emoji: "🍳", label: "Recipes" },
   { href: "/shopping", emoji: "🛒", label: "Shopping" },
