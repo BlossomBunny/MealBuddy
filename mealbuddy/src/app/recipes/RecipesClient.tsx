@@ -14,10 +14,55 @@ interface Props {
   userId: string;
 }
 
-function matchScore(recipe: Recipe, owned: string[]): number {
-  const needed = recipe.ingredients.map((i) => i.name.toLowerCase());
-  const matches = needed.filter((n) => owned.some((o) => n.includes(o) || o.includes(n)));
-  return needed.length ? matches.length / needed.length : 0;
+// Ingredients matching these are "swappable" — pantry staples, seasonings,
+// garnishes, or things you can easily sub/skip. They don't block "I can make this".
+const SWAPPABLE_PATTERNS = [
+  "salt", "pepper", "oil", "garlic", "ginger", "herb", "spice", "seasoning",
+  "sauce", "vinegar", "stock", "bouillon", "sugar", "lemon", "lime", "chilli",
+  "chili", "paprika", "cumin", "oregano", "basil", "thyme", "rosemary",
+  "parsley", "coriander", "cilantro", "mint", "chive", "sesame", "butter",
+  "mustard", "honey", "worcestershire", "bay leaf", "cinnamon", "nutmeg",
+  "curry powder", "breadcrumbs", "flour", "cornflour", "cornstarch", "yeast",
+  "baking powder", "baking soda", "vanilla",
+];
+
+function isSwappable(name: string): boolean {
+  const lower = name.toLowerCase();
+  return SWAPPABLE_PATTERNS.some((p) => lower.includes(p));
+}
+
+function isOwned(name: string, owned: string[]): boolean {
+  const lower = name.toLowerCase();
+  return owned.some((o) => lower.includes(o) || o.includes(lower));
+}
+
+interface MatchInfo {
+  essentialTotal: number;
+  essentialHave: number;
+  swappableTotal: number;
+  swappableHave: number;
+  pct: number; // overall % of all ingredients you have
+  essentialPct: number; // % of essential (non-swappable) ingredients you have
+  canMake: boolean; // true if every essential ingredient is in stock
+}
+
+function getMatch(recipe: Recipe, owned: string[]): MatchInfo {
+  const essentials = recipe.ingredients.filter((i) => !isSwappable(i.name));
+  const swappables = recipe.ingredients.filter((i) => isSwappable(i.name));
+  const essentialHave = essentials.filter((i) => isOwned(i.name, owned)).length;
+  const swappableHave = swappables.filter((i) => isOwned(i.name, owned)).length;
+  const total = recipe.ingredients.length;
+  const essentialPct = essentials.length ? Math.round((essentialHave / essentials.length) * 100) : 100;
+  const pct = total ? Math.round(((essentialHave + swappableHave) / total) * 100) : 100;
+  return {
+    essentialTotal: essentials.length,
+    essentialHave,
+    swappableTotal: swappables.length,
+    swappableHave,
+    pct,
+    essentialPct,
+    canMake: essentialPct === 100,
+  };
 }
 
 // Rough emoji → shopping category mapping so auto-added items land in a sensible place
@@ -98,23 +143,36 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
   }, [recipes]);
 
   const sorted = [...recipes].sort((a, b) => {
-    const sa = matchScore(a, ownedIngredientNames);
-    const sb = matchScore(b, ownedIngredientNames);
-    return sb - sa;
+    const ma = getMatch(a, ownedIngredientNames);
+    const mb = getMatch(b, ownedIngredientNames);
+    if (mb.essentialPct !== ma.essentialPct) return mb.essentialPct - ma.essentialPct;
+    return mb.pct - ma.pct;
   });
 
   const filtered = sorted
-    .filter((r) => (filter === "can-make" ? matchScore(r, ownedIngredientNames) >= 0.5 : true))
+    .filter((r) => (filter === "can-make" ? getMatch(r, ownedIngredientNames).canMake : true))
     .filter((r) => (activeTag ? (r.tags ?? []).includes(activeTag) : true));
 
-  // Ingredients from the selected recipe that aren't in the fridge/pantry yet
-  const missingIngredients = useMemo(() => {
+  // Ingredients from the selected recipe that aren't in the fridge/pantry yet,
+  // split into essentials (block cooking) vs swappable/optional (nice to have)
+  const missingEssentials = useMemo(() => {
     if (!selectedRecipe) return [];
-    return selectedRecipe.ingredients.filter((ing) => {
-      const lower = ing.name.toLowerCase();
-      return !ownedIngredientNames.some((o) => lower.includes(o) || o.includes(lower));
-    });
+    return selectedRecipe.ingredients.filter(
+      (ing) => !isSwappable(ing.name) && !isOwned(ing.name, ownedIngredientNames)
+    );
   }, [selectedRecipe, ownedIngredientNames]);
+
+  const missingSwappables = useMemo(() => {
+    if (!selectedRecipe) return [];
+    return selectedRecipe.ingredients.filter(
+      (ing) => isSwappable(ing.name) && !isOwned(ing.name, ownedIngredientNames)
+    );
+  }, [selectedRecipe, ownedIngredientNames]);
+
+  const missingIngredients = useMemo(
+    () => [...missingEssentials, ...missingSwappables],
+    [missingEssentials, missingSwappables]
+  );
 
   async function addMissingToShoppingList() {
     if (!selectedRecipe || missingIngredients.length === 0) return;
@@ -250,8 +308,23 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
       {/* Recipe cards */}
       <div className="space-y-3">
         {filtered.map((recipe) => {
-          const score = matchScore(recipe, ownedIngredientNames);
-          const pct = Math.round(score * 100);
+          const match = getMatch(recipe, ownedIngredientNames);
+          const missingEssentialCount = match.essentialTotal - match.essentialHave;
+          let statusLabel: string;
+          let statusColor: string;
+          if (match.canMake && match.pct === 100) {
+            statusLabel = "✅ Got it all!";
+            statusColor = "text-green-500";
+          } else if (match.canMake) {
+            statusLabel = "✅ Have the essentials";
+            statusColor = "text-green-500";
+          } else if (missingEssentialCount === 1) {
+            statusLabel = "🛒 Missing 1 key item";
+            statusColor = "text-orange-500";
+          } else {
+            statusLabel = `🛒 Missing ${missingEssentialCount} key items`;
+            statusColor = "text-orange-500";
+          }
           return (
             <motion.div
               key={recipe.id}
@@ -267,9 +340,7 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
                     <span className="text-xs text-gray-400">⏱ {(recipe.prep_time_mins ?? 0) + (recipe.cook_time_mins ?? 0)} min</span>
                     <span className="text-xs text-gray-400">👥 {recipe.servings}</span>
-                    <span className={`text-xs font-bold ${pct >= 80 ? "text-green-500" : pct >= 50 ? "text-teal-500" : "text-gray-400"}`}>
-                      {pct}% ingredients ✓
-                    </span>
+                    <span className={`text-xs font-bold ${statusColor}`}>{statusLabel}</span>
                   </div>
                 </div>
               </div>
@@ -278,8 +349,8 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
-                    width: `${pct}%`,
-                    background: pct >= 80 ? "#22c55e" : pct >= 50 ? "#f97316" : "#d1d5db",
+                    width: `${match.essentialPct}%`,
+                    background: match.canMake ? "#22c55e" : match.essentialPct >= 50 ? "#f97316" : "#d1d5db",
                   }}
                 />
               </div>
@@ -407,27 +478,60 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, fa
                   </p>
                 )}
 
-                {/* Ingredients */}
-                <div>
-                  <h3 className="font-display font-black text-lg mb-3">Ingredients</h3>
-                  <div className="space-y-2">
-                    {selectedRecipe.ingredients.map((ing, i) => {
-                      const have = ownedIngredientNames.some(
-                        (o) => ing.name.toLowerCase().includes(o) || o.includes(ing.name.toLowerCase())
-                      );
-                      const scale = targetServings / (selectedRecipe.servings || 1);
-                      const scaledQty = ing.quantity != null ? formatQty(ing.quantity * scale) : null;
-                      return (
-                        <div key={i} className={`flex items-center gap-3 p-2 rounded-xl ${have ? "bg-green-50" : "bg-gray-50"}`}>
-                          <span className="text-xl">{ing.emoji}</span>
-                          <span className="flex-1 font-medium">{ing.name}</span>
-                          <span className="text-sm text-gray-500">{scaledQty} {ing.unit}</span>
-                          {have && <span className="text-green-500 text-sm">✓</span>}
-                        </div>
-                      );
-                    })}
+                {/* Status banner: missing essentials vs all-set */}
+                {missingEssentials.length > 0 ? (
+                  <div className="bg-orange-50 border-2 border-orange-100 rounded-2xl p-3">
+                    <p className="font-bold text-sm text-orange-600">
+                      🛒 Missing {missingEssentials.length} key ingredient{missingEssentials.length > 1 ? "s" : ""}
+                    </p>
+                    <p className="text-xs text-orange-500 mt-0.5">
+                      {missingEssentials.map((i) => i.name).join(", ")}
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-green-50 border-2 border-green-100 rounded-2xl p-3">
+                    <p className="font-bold text-sm text-green-600">✅ You've got everything essential!</p>
+                    {missingSwappables.length > 0 && (
+                      <p className="text-xs text-green-600/80 mt-0.5">
+                        Missing {missingSwappables.length} swappable item{missingSwappables.length > 1 ? "s" : ""} — sub it, skip it, or grab it next trip.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Ingredients */}
+                {(() => {
+                  const scale = targetServings / (selectedRecipe.servings || 1);
+                  const essentialIngredients = selectedRecipe.ingredients.filter((ing) => !isSwappable(ing.name));
+                  const swappableIngredients = selectedRecipe.ingredients.filter((ing) => isSwappable(ing.name));
+                  const renderRow = (ing: typeof selectedRecipe.ingredients[number], i: number) => {
+                    const have = isOwned(ing.name, ownedIngredientNames);
+                    const scaledQty = ing.quantity != null ? formatQty(ing.quantity * scale) : null;
+                    return (
+                      <div key={i} className={`flex items-center gap-3 p-2 rounded-xl ${have ? "bg-green-50" : "bg-gray-50"}`}>
+                        <span className="text-xl">{ing.emoji}</span>
+                        <span className="flex-1 font-medium">{ing.name}</span>
+                        <span className="text-sm text-gray-500">{scaledQty} {ing.unit}</span>
+                        {have && <span className="text-green-500 text-sm">✓</span>}
+                      </div>
+                    );
+                  };
+                  return (
+                    <>
+                      <div>
+                        <h3 className="font-display font-black text-lg mb-3">🎯 Key ingredients</h3>
+                        <div className="space-y-2">{essentialIngredients.map(renderRow)}</div>
+                      </div>
+                      {swappableIngredients.length > 0 && (
+                        <div>
+                          <h3 className="font-display font-black text-lg mb-1">🔄 Swappable & pantry basics</h3>
+                          <p className="text-xs text-gray-400 mb-3">Easy to substitute or skip if you're out</p>
+                          <div className="space-y-2">{swappableIngredients.map(renderRow)}</div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* Add missing ingredients to shopping list */}
                 {missingIngredients.length > 0 && (
