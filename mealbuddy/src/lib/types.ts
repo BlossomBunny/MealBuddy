@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type SpecialMeal = "takeaway" | "eating_out" | "microwave";
 export type Difficulty = "easy" | "medium" | "hard";
 export type IngredientCategory =
   | "produce"
@@ -75,17 +76,24 @@ export interface Recipe {
   created_at: string;
 }
 
+// Slim recipe shape used for the meal planner (picker list + plan card display)
+export type RecipeLite = Pick<
+  Recipe,
+  "id" | "title" | "emoji" | "description" | "prep_time_mins" | "cook_time_mins" | "servings" | "difficulty" | "tags"
+>;
+
 export interface MealPlan {
   id: string;
   family_id: string;
-  recipe_id: string;
+  recipe_id: string | null;
   planned_for: string;
   meal_type: MealType;
   servings: number;
   cooked: boolean;
   cooked_at: string | null;
+  special: SpecialMeal | null;
   created_at: string;
-  recipe?: Recipe;
+  recipe?: RecipeLite | null;
 }
 
 export interface ShoppingItem {
@@ -96,11 +104,11 @@ export interface ShoppingItem {
   category: IngredientCategory;
   quantity: number | null;
   unit: string | null;
+  expires_at: string | null;
   checked: boolean;
   added_by: string | null;
   recipe_id: string | null;
   created_at: string;
-  expires_at: string | null; 
 }
 
 export interface CookLog {
@@ -117,6 +125,19 @@ export interface CookLog {
 // ─────────────────────────────────────────
 // Ingredient category metadata
 // ─────────────────────────────────────────
+// ─────────────────────────────────────────
+// "Not cooking tonight" options for the meal planner
+// ─────────────────────────────────────────
+export const SPECIAL_MEALS: {
+  value: SpecialMeal;
+  label: string;
+  emoji: string;
+}[] = [
+  { value: "takeaway", label: "Takeaway", emoji: "🥡" },
+  { value: "eating_out", label: "Eating Out", emoji: "🍽️" },
+  { value: "microwave", label: "Microwave Meal", emoji: "🍱" },
+];
+
 export const CATEGORIES: {
   value: IngredientCategory;
   label: string;
