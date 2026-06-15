@@ -19,7 +19,8 @@
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.3.0",
     "react-hot-toast": "^2.4.1",
-    "canvas-confetti": "^1.9.3"
+    "canvas-confetti": "^1.9.3",
+    "html5-qrcode": "^2.3.8"
   },
   "devDependencies": {
     "typescript": "^5",
