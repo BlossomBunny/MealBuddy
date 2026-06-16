@@ -95,7 +95,7 @@ function recipesForSlot(recipes: RecipeLite[], slot: MealSlot): RecipeLite[] {
 }
 
 const MEAL_PLAN_SELECT =
-  "*, recipe:recipes(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
+  "*, recipe:recipes!meal_plan_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
 
 export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId }: Props) {
   const supabase = createClient();
