@@ -14,14 +14,13 @@ values
   {"emoji":"🍓","name":"Strawberries","quantity":100,"unit":"g"},
   {"emoji":"🫐","name":"Blueberries","quantity":80,"unit":"g"},
   {"emoji":"🍌","name":"Banana","quantity":1,"unit":"pieces"},
-  {"emoji":"🍯","name":"Honey","quantity":2,"unit":"tbsp"},
-  {"emoji":"🌱","name":"Mint (optional)","quantity":null,"unit":null}
+  {"emoji":"🍯","name":"Honey","quantity":2,"unit":"tbsp"}
 ]',
 '[
   {"step":1,"description":"Slice the strawberries and banana into bite-sized pieces."},
   {"step":2,"description":"Divide the Greek yoghurt between two bowls."},
   {"step":3,"description":"Arrange the fruit on top of the yoghurt."},
-  {"step":4,"description":"Drizzle with honey and add a mint leaf if you have one. Serve straight away."}
+  {"step":4,"description":"Drizzle with honey and serve straight away."}
 ]',
 false),
 
@@ -40,20 +39,18 @@ false),
 ]',
 false),
 
-(null, 'Simple Omelette', '🍳', 'A fluffy 3-egg omelette — great plain or loaded with whatever you have in the fridge.', 5, 5, 2, 'easy', array['breakfast','lunch','quick'],
+(null, 'Simple Omelette', '🍳', 'A fluffy 3-egg omelette — great plain or with a sprinkle of cheddar.', 5, 5, 2, 'easy', array['breakfast','lunch','quick'],
 '[
   {"emoji":"🥚","name":"Eggs","quantity":6,"unit":"pieces"},
-  {"emoji":"🧈","name":"Butter","quantity":10,"unit":"g"},
-  {"emoji":"🧂","name":"Salt","quantity":null,"unit":null},
-  {"emoji":"🌿","name":"Black pepper","quantity":null,"unit":null},
-  {"emoji":"🧀","name":"Cheddar (optional)","quantity":40,"unit":"g"},
-  {"emoji":"🌿","name":"Fresh chives or parsley (optional)","quantity":null,"unit":null}
+  {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"},
+  {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null},
+  {"emoji":"🧀","name":"Cheddar (optional)","quantity":40,"unit":"g"}
 ]',
 '[
   {"step":1,"description":"Crack 3 eggs per person into a bowl. Add a pinch of salt and pepper and beat well with a fork."},
-  {"step":2,"description":"Melt butter in a non-stick frying pan over medium-high heat until foaming."},
+  {"step":2,"description":"Heat a little oil in a non-stick frying pan over medium-high heat."},
   {"step":3,"description":"Pour in the egg mixture. As the edges set, use a spatula to pull them inward so runny egg flows to the edge.","tip":"Don''t walk away — omelettes cook fast!"},
-  {"step":4,"description":"When the top is just set but still slightly glossy, scatter over cheese or herbs if using."},
+  {"step":4,"description":"When the top is just set but still slightly glossy, scatter over cheddar if using."},
   {"step":5,"description":"Fold the omelette in half, slide onto a plate and serve immediately."}
 ]',
 false),
@@ -64,16 +61,15 @@ false),
   {"emoji":"🫑","name":"Mixed peppers","quantity":1,"unit":"pieces"},
   {"emoji":"🍄","name":"Mushrooms","quantity":100,"unit":"g"},
   {"emoji":"🥬","name":"Spinach","quantity":60,"unit":"g"},
-  {"emoji":"🧅","name":"Spring onions","quantity":2,"unit":"pieces"},
-  {"emoji":"🧈","name":"Butter or oil","quantity":10,"unit":"g"},
+  {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"},
   {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null}
 ]',
 '[
-  {"step":1,"description":"Dice the peppers, slice the mushrooms and chop the spring onions."},
-  {"step":2,"description":"Heat half the butter in a frying pan over medium heat. Fry the peppers and mushrooms for 3–4 minutes until softened. Add the spinach and stir until wilted. Set aside."},
-  {"step":3,"description":"Beat the eggs with salt and pepper. Melt remaining butter in the pan over medium-high heat."},
+  {"step":1,"description":"Dice the peppers and slice the mushrooms."},
+  {"step":2,"description":"Heat half the oil in a frying pan over medium heat. Fry the peppers and mushrooms for 3–4 minutes until softened. Add the spinach and stir until wilted. Set aside."},
+  {"step":3,"description":"Beat the eggs with salt and pepper. Add the remaining oil to the pan over medium-high heat."},
   {"step":4,"description":"Pour in the eggs. As they begin to set at the edges, push them inward so runny egg fills the gaps."},
-  {"step":5,"description":"Scatter the cooked veg over one half. Fold the omelette, slide onto a plate and top with spring onions."}
+  {"step":5,"description":"Scatter the cooked veg over one half. Fold the omelette and slide onto a plate."}
 ]',
 false),
 
@@ -116,55 +112,55 @@ false),
 '[
   {"emoji":"🍚","name":"Cooked rice (day-old is best)","quantity":300,"unit":"g"},
   {"emoji":"🥚","name":"Eggs","quantity":3,"unit":"pieces"},
-  {"emoji":"🧅","name":"Spring onions","quantity":3,"unit":"pieces"},
-  {"emoji":"🌶️","name":"Soy sauce","quantity":2,"unit":"tbsp"},
-  {"emoji":"🫒","name":"Sesame oil","quantity":1,"unit":"tsp"},
   {"emoji":"🧊","name":"Frozen peas","quantity":80,"unit":"g"},
+  {"emoji":"🫑","name":"Mixed peppers","quantity":0.5,"unit":"pieces"},
   {"emoji":"🧄","name":"Garlic powder","quantity":0.5,"unit":"tsp"},
-  {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"}
+  {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"},
+  {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null}
 ]',
 '[
-  {"step":1,"description":"Slice the spring onions."},
-  {"step":2,"description":"Heat oil in a wok or large frying pan over high heat. Add the garlic powder and stir for a few seconds until fragrant."},
-  {"step":3,"description":"Add the peas and rice. Break up any clumps and stir-fry for 2–3 minutes until heated through."},
-  {"step":4,"description":"Push everything to the side of the pan. Crack the eggs into the empty space, scramble and mix into the rice as they cook.","tip":"High heat is the secret to good fried rice — don''t be shy with the flame."},
-  {"step":5,"description":"Add soy sauce and sesame oil. Toss everything together. Top with spring onions and serve."}
+  {"step":1,"description":"Dice the peppers."},
+  {"step":2,"description":"Heat oil in a wok or large frying pan over high heat. Add garlic powder and stir for a few seconds until fragrant."},
+  {"step":3,"description":"Add the peppers and peas. Stir-fry for 2 minutes, then add the rice. Break up any clumps and stir-fry for 2–3 minutes until heated through."},
+  {"step":4,"description":"Push everything to the side. Crack the eggs into the empty space, scramble, then mix into the rice as they cook.","tip":"High heat is the secret to good fried rice — don''t be shy with the flame."},
+  {"step":5,"description":"Season with salt and pepper. Toss everything together and serve."}
 ]',
 false),
 
-(null, 'Chicken & Cucumber Rice Bowl', '🍗', 'A light, protein-rich bowl with tender chicken and cool cucumber — ready in minutes.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
+(null, 'Chicken & Cucumber Rice Bowl', '🍗', 'A light, protein-rich bowl with tender chicken and cool cucumber.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
 '[
   {"emoji":"🍚","name":"Cooked rice","quantity":300,"unit":"g"},
   {"emoji":"🍗","name":"Cooked chicken breast","quantity":200,"unit":"g"},
   {"emoji":"🥒","name":"Cucumber","quantity":0.5,"unit":"pieces"},
-  {"emoji":"🧅","name":"Spring onions","quantity":2,"unit":"pieces"},
-  {"emoji":"🌶️","name":"Soy sauce","quantity":1,"unit":"tbsp"},
-  {"emoji":"🫒","name":"Sesame oil","quantity":1,"unit":"tsp"},
   {"emoji":"🍋","name":"Lemon juice","quantity":1,"unit":"tbsp"},
+  {"emoji":"🫒","name":"Olive oil","quantity":1,"unit":"tbsp"},
+  {"emoji":"🧄","name":"Garlic powder","quantity":0.25,"unit":"tsp"},
+  {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null},
   {"emoji":"🌿","name":"Sesame seeds (optional)","quantity":null,"unit":null}
 ]',
 '[
-  {"step":1,"description":"Slice or shred the cooked chicken. Dice the cucumber and slice the spring onions."},
-  {"step":2,"description":"Mix together the soy sauce, sesame oil and lemon juice in a small bowl to make the dressing."},
-  {"step":3,"description":"Divide the rice between two bowls. Top with chicken, cucumber and spring onions."},
-  {"step":4,"description":"Drizzle the dressing over each bowl. Scatter sesame seeds over the top if using. Serve at room temperature or cold."}
+  {"step":1,"description":"Slice or shred the cooked chicken. Dice the cucumber."},
+  {"step":2,"description":"Mix the lemon juice, olive oil, garlic powder and a pinch of salt and pepper together to make a simple dressing."},
+  {"step":3,"description":"Divide the rice between two bowls. Top with chicken and cucumber."},
+  {"step":4,"description":"Drizzle the dressing over each bowl. Scatter sesame seeds if using. Serve at room temperature or cold."}
 ]',
 false),
 
-(null, 'Avocado & Egg Toast', '🥑', 'Creamy smashed avocado with a perfectly cooked egg — a classic that never gets old.', 5, 5, 2, 'easy', array['breakfast','lunch','healthy'],
+(null, 'Egg & Spinach Toast', '🥚', 'A perfectly cooked egg on toast with garlicky wilted spinach — simple and satisfying.', 5, 5, 2, 'easy', array['breakfast','lunch','healthy'],
 '[
   {"emoji":"🍞","name":"Sourdough or thick bread","quantity":4,"unit":"pieces"},
-  {"emoji":"🥑","name":"Avocado","quantity":2,"unit":"pieces"},
   {"emoji":"🥚","name":"Eggs","quantity":2,"unit":"pieces"},
-  {"emoji":"🍋","name":"Lemon juice","quantity":1,"unit":"tbsp"},
+  {"emoji":"🥬","name":"Spinach","quantity":80,"unit":"g"},
+  {"emoji":"🫒","name":"Olive oil","quantity":1,"unit":"tbsp"},
+  {"emoji":"🧄","name":"Garlic powder","quantity":0.25,"unit":"tsp"},
   {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null},
   {"emoji":"🌶️","name":"Chilli flakes (optional)","quantity":null,"unit":null}
 ]',
 '[
   {"step":1,"description":"Toast the bread."},
-  {"step":2,"description":"Halve and scoop the avocados into a bowl. Add lemon juice, salt and pepper and mash with a fork to your preferred texture.","tip":"Leave it chunky or go fully smooth — either works great."},
+  {"step":2,"description":"Heat a little olive oil in a pan over medium heat. Add the spinach and garlic powder, stir until wilted, about 1–2 minutes. Season with salt and pepper."},
   {"step":3,"description":"Poach or fry the eggs to your liking."},
-  {"step":4,"description":"Pile the smashed avocado onto the toast. Top each slice with an egg. Finish with chilli flakes if using."}
+  {"step":4,"description":"Pile the spinach onto the toast. Top each slice with an egg. Finish with chilli flakes if using."}
 ]',
 false),
 
@@ -174,18 +170,18 @@ false),
   {"emoji":"🥚","name":"Eggs","quantity":4,"unit":"pieces"},
   {"emoji":"🍄","name":"Mushrooms","quantity":100,"unit":"g"},
   {"emoji":"🥬","name":"Spinach","quantity":60,"unit":"g"},
-  {"emoji":"🧈","name":"Butter","quantity":15,"unit":"g"},
+  {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"},
   {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null}
 ]',
 '[
   {"step":1,"description":"Halve and toast the bagels."},
-  {"step":2,"description":"Slice the mushrooms. Melt half the butter in a frying pan over medium heat and fry the mushrooms for 3–4 minutes until golden. Add the spinach and stir until just wilted. Season and set aside."},
-  {"step":3,"description":"Beat the eggs with a pinch of salt and pepper. Melt the remaining butter in the pan over low heat. Add eggs and stir gently until just set but still creamy.","tip":"Low and slow makes the best scrambled eggs — take them off the heat while still slightly runny."},
+  {"step":2,"description":"Slice the mushrooms. Heat a little oil in a frying pan over medium heat and fry the mushrooms for 3–4 minutes until golden. Add the spinach and stir until just wilted. Season and set aside."},
+  {"step":3,"description":"Beat the eggs with a pinch of salt and pepper. Add a little more oil to the pan over low heat. Add eggs and stir gently until just set but still creamy.","tip":"Low and slow makes the best scrambled eggs — take them off the heat while still slightly runny."},
   {"step":4,"description":"Pile the scrambled egg onto the bagel bottoms. Top with the mushroom and spinach mixture. Add the bagel tops and serve."}
 ]',
 false),
 
-(null, 'Simple Chicken Salad', '🥗', 'Leftover or rotisserie chicken tossed with crisp salad and peppers in a light dressing.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
+(null, 'Simple Chicken Salad', '🥗', 'Leftover chicken tossed with crisp salad leaves, cucumber and peppers in a light dressing.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
 '[
   {"emoji":"🍗","name":"Cooked chicken breast","quantity":250,"unit":"g"},
   {"emoji":"🥬","name":"Mixed salad leaves","quantity":80,"unit":"g"},
@@ -197,7 +193,7 @@ false),
 ]',
 '[
   {"step":1,"description":"Shred or slice the cooked chicken."},
-  {"step":2,"description":"Dice the cucumber. Thinly slice the peppers."},
+  {"step":2,"description":"Slice the peppers and dice the cucumber."},
   {"step":3,"description":"Whisk the lemon juice and olive oil together with a pinch of salt and pepper."},
   {"step":4,"description":"Toss the salad leaves, cucumber and peppers together. Add the chicken on top."},
   {"step":5,"description":"Drizzle over the dressing and serve straight away."}
