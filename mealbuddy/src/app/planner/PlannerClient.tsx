@@ -8,6 +8,14 @@ import { createClient } from "@/lib/supabase/client";
 import type { MealPlan, RecipeLite, SpecialMeal, RecipeIngredient } from "@/lib/types";
 import { SPECIAL_MEALS, UNITS } from "@/lib/types";
 
+type MealSlot = "breakfast" | "lunch" | "dinner";
+
+const MEAL_SLOTS: { type: MealSlot; emoji: string; label: string; tag: string }[] = [
+  { type: "breakfast", emoji: "🌅", label: "Breakfast", tag: "breakfast" },
+  { type: "lunch",     emoji: "☀️",  label: "Lunch",     tag: "lunch"     },
+  { type: "dinner",   emoji: "🌙", label: "Dinner",    tag: "dinner"    },
+];
+
 interface PantryItem {
   id: string;
   name: string;
@@ -28,10 +36,10 @@ interface Props {
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const SPECIAL_META: Record<SpecialMeal, { label: string; emoji: string }> = {
-  takeaway: { label: "Takeaway", emoji: "🥡" },
-  eating_out: { label: "Eating Out", emoji: "🍽️" },
-  microwave: { label: "Microwave Meal", emoji: "🍱" },
-  leftovers: { label: "Leftovers", emoji: "♻️" },
+  takeaway:   { label: "Takeaway",       emoji: "🥡" },
+  eating_out: { label: "Eating Out",     emoji: "🍽️" },
+  microwave:  { label: "Microwave Meal", emoji: "🍱" },
+  leftovers:  { label: "Leftovers",      emoji: "♻️" },
 };
 
 function formatDate(dateStr: string) {
@@ -67,6 +75,24 @@ function findPantryMatch(name: string, pantry: PantryItem[]): PantryItem | null 
   );
 }
 
+/** Filter recipes by meal slot — breakfast/lunch only pick tagged recipes;
+ *  dinner picks anything NOT tagged breakfast-only or lunch-only. */
+function recipesForSlot(recipes: RecipeLite[], slot: MealSlot): RecipeLite[] {
+  if (slot === "breakfast") {
+    return recipes.filter((r) => (r.tags ?? []).includes("breakfast"));
+  }
+  if (slot === "lunch") {
+    return recipes.filter((r) => (r.tags ?? []).includes("lunch"));
+  }
+  // dinner: exclude recipes that are tagged breakfast or lunch but NOT dinner
+  return recipes.filter((r) => {
+    const tags = r.tags ?? [];
+    const isBreakfastOnly = tags.includes("breakfast") && !tags.includes("dinner") && !tags.includes("lunch");
+    const isLunchOnly = tags.includes("lunch") && !tags.includes("dinner") && !tags.includes("breakfast");
+    return !isBreakfastOnly && !isLunchOnly;
+  });
+}
+
 const MEAL_PLAN_SELECT =
   "*, recipe:recipes(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
 
@@ -75,14 +101,16 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
   const [plans, setPlans] = useState<MealPlan[]>(initialMealPlans);
   const [pantry, setPantry] = useState<PantryItem[]>(ownedIngredients);
 
-  // Main recipe picker state
+  // Picker state
   const [pickerDate, setPickerDate] = useState<string | null>(null);
+  const [pickerMealType, setPickerMealType] = useState<MealSlot>("dinner");
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Leftover editor state
   const [leftoverDate, setLeftoverDate] = useState<string | null>(null);
+  const [leftoverMealType, setLeftoverMealType] = useState<MealSlot>("dinner");
   const [leftoverRecipeId, setLeftoverRecipeId] = useState<string | null>(null);
   const [leftoverExtras, setLeftoverExtras] = useState<RecipeIngredient[]>([]);
   const [leftoverSearch, setLeftoverSearch] = useState("");
@@ -90,7 +118,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
   const today = todayISO();
 
-  // Live-sync the week's plan across devices/family members
+  // Live-sync the week's plan across devices / family members
   useEffect(() => {
     const channel = supabase
       .channel(`meal_plan_${familyId}`)
@@ -114,19 +142,17 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         }
       )
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [familyId]);
 
-  function planFor(date: string) {
-    return plans.find((p) => p.planned_for === date && p.meal_type === "dinner");
+  function planFor(date: string, mealType: MealSlot) {
+    return plans.find((p) => p.planned_for === date && p.meal_type === mealType);
   }
 
   async function setMeal(
     date: string,
+    mealType: MealSlot,
     payload: {
       recipe_id: string | null;
       special: SpecialMeal | null;
@@ -135,7 +161,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
       leftover_extra_ingredients?: RecipeIngredient[];
     }
   ): Promise<boolean> {
-    const existing = planFor(date);
+    const existing = planFor(date, mealType);
 
     if (existing) {
       const { data, error } = await supabase
@@ -149,7 +175,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
     } else {
       const { data, error } = await supabase
         .from("meal_plan")
-        .insert({ family_id: familyId, planned_for: date, meal_type: "dinner", ...payload })
+        .insert({ family_id: familyId, planned_for: date, meal_type: mealType, ...payload })
         .select(MEAL_PLAN_SELECT)
         .single();
       if (error) { toast.error(error.message || "Couldn't add to the plan"); return false; }
@@ -161,21 +187,31 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
     return true;
   }
 
-  function selectRecipe(date: string, recipe: RecipeLite) {
-    setMeal(date, { recipe_id: recipe.id, special: null, servings: 2 });
-    toast.success(`${recipe.emoji} ${recipe.title} added to ${dayLabel(date)}!`);
+  function openPicker(date: string, mealType: MealSlot) {
+    setPickerDate(date);
+    setPickerMealType(mealType);
+    setSearch("");
+    // Auto-filter tags to match the slot so relevant recipes surface first
+    setActiveTag(mealType === "dinner" ? null : mealType);
   }
 
-  function selectSpecial(date: string, special: SpecialMeal) {
+  async function selectRecipe(date: string, mealType: MealSlot, recipe: RecipeLite) {
+    const slotLabel = MEAL_SLOTS.find((s) => s.type === mealType)?.label ?? mealType;
+    const ok = await setMeal(date, mealType, { recipe_id: recipe.id, special: null, servings: 2 });
+    if (ok) toast.success(`${recipe.emoji} ${recipe.title} added to ${dayLabel(date)} ${slotLabel}!`);
+  }
+
+  async function selectSpecial(date: string, mealType: MealSlot, special: SpecialMeal) {
     if (special === "leftovers") {
-      // Close the picker and open the leftover editor instead
       setPickerDate(null);
-      openLeftoverEditor(date);
+      openLeftoverEditor(date, mealType);
       return;
     }
-    setMeal(date, { recipe_id: null, special, servings: 2 });
-    const meta = SPECIAL_META[special];
-    toast.success(`${meta.emoji} ${meta.label} planned for ${dayLabel(date)}!`);
+    const ok = await setMeal(date, mealType, { recipe_id: null, special, servings: 2 });
+    if (ok) {
+      const meta = SPECIAL_META[special];
+      toast.success(`${meta.emoji} ${meta.label} planned for ${dayLabel(date)}!`);
+    }
   }
 
   async function removeMeal(id: string) {
@@ -192,10 +228,9 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
   // ── Leftover editor ───────────────────────────────────────
 
-  function openLeftoverEditor(date: string) {
-    const existing = planFor(date);
+  function openLeftoverEditor(date: string, mealType: MealSlot = "dinner") {
+    const existing = planFor(date, mealType);
     if (existing?.special === "leftovers") {
-      // Pre-fill from existing plan
       setLeftoverRecipeId(existing.leftover_recipe_id ?? null);
       setLeftoverExtras(existing.leftover_extra_ingredients ?? []);
     } else {
@@ -203,6 +238,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
       setLeftoverExtras([]);
     }
     setLeftoverSearch("");
+    setLeftoverMealType(mealType);
     setLeftoverDate(date);
   }
 
@@ -227,7 +263,6 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
   async function deductExtras(extras: RecipeIngredient[]) {
     const updates: { id: string; quantity?: number; secondary_quantity?: number }[] = [];
-
     extras.forEach((ing) => {
       if (!ing.quantity || ing.quantity <= 0) return;
       const match = findPantryMatch(ing.name, pantry);
@@ -239,16 +274,13 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         updates.push({ id: match.id, secondary_quantity: Math.max(0, (match.secondary_quantity ?? 0) - ing.quantity) });
       }
     });
-
     if (updates.length === 0) return;
-
     for (const u of updates) {
       const patch: Record<string, number> = {};
       if (u.quantity !== undefined) patch.quantity = u.quantity;
       if (u.secondary_quantity !== undefined) patch.secondary_quantity = u.secondary_quantity;
       await supabase.from("ingredients").update(patch).eq("id", u.id);
     }
-
     setPantry((prev) =>
       prev.map((p) => {
         const u = updates.find((x) => x.id === p.id);
@@ -260,7 +292,6 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         };
       })
     );
-
     toast.success(`Pantry updated — ${updates.length} item${updates.length === 1 ? "" : "s"} deducted 📦`);
   }
 
@@ -272,9 +303,8 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         .map((ing) => ({ ...ing, name: ing.name.trim() }))
         .filter((ing) => ing.name.length > 0);
 
-      const wasNew = !planFor(leftoverDate);
-
-      const ok = await setMeal(leftoverDate, {
+      const wasNew = !planFor(leftoverDate, leftoverMealType);
+      const ok = await setMeal(leftoverDate, leftoverMealType, {
         recipe_id: null,
         special: "leftovers",
         servings: 2,
@@ -283,10 +313,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
       });
       if (!ok) return;
 
-      // Only deduct extras from pantry on first save (not edits), to avoid double-counting
-      if (wasNew && cleaned.length > 0) {
-        await deductExtras(cleaned);
-      }
+      if (wasNew && cleaned.length > 0) await deductExtras(cleaned);
 
       const recipeMeta = leftoverRecipeId ? recipes.find((r) => r.id === leftoverRecipeId) : null;
       toast.success(`♻️ Leftovers${recipeMeta ? ` (${recipeMeta.title})` : ""} logged for ${dayLabel(leftoverDate)}!`);
@@ -299,37 +326,38 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
   // ── Week controls ─────────────────────────────────────────
 
   async function randomizeWeek() {
-    const emptyDates = weekDates.filter((date) => !planFor(date));
-    if (emptyDates.length === 0) {
-      toast("Your week's already sorted! 🎉");
-      return;
-    }
-    if (recipes.length === 0) {
-      toast.error("No recipes to pick from yet");
-      return;
-    }
+    // Fill each empty slot with a slot-appropriate recipe
+    const emptySlots = weekDates.flatMap((date) =>
+      MEAL_SLOTS.filter((s) => !planFor(date, s.type)).map((s) => ({ date, slot: s }))
+    );
+    if (emptySlots.length === 0) { toast("Your whole week is already sorted! 🎉"); return; }
+
     setBusy(true);
     try {
-      const shuffled = [...recipes].sort(() => Math.random() - 0.5);
-      const rows = emptyDates.map((date, i) => {
-        const recipe = shuffled[i % shuffled.length];
+      const rows = emptySlots.map(({ date, slot }) => {
+        const pool = recipesForSlot(recipes, slot.type);
+        if (pool.length === 0) return null;
+        const recipe = pool[Math.floor(Math.random() * pool.length)];
         return {
           family_id: familyId,
           planned_for: date,
-          meal_type: "dinner" as const,
+          meal_type: slot.type as "breakfast" | "lunch" | "dinner",
           recipe_id: recipe.id,
           special: null,
           servings: 2,
         };
-      });
-      const { data, error } = await supabase
-        .from("meal_plan")
-        .insert(rows)
-        .select(MEAL_PLAN_SELECT);
+      }).filter(Boolean) as {
+        family_id: string; planned_for: string; meal_type: "breakfast" | "lunch" | "dinner";
+        recipe_id: string; special: null; servings: number;
+      }[];
+
+      if (rows.length === 0) { toast.error("No recipes found for some slots"); return; }
+
+      const { data, error } = await supabase.from("meal_plan").insert(rows).select(MEAL_PLAN_SELECT);
       if (error) { toast.error(error.message || "Couldn't randomize the week"); return; }
       setPlans((prev) => [...prev, ...((data ?? []) as unknown as MealPlan[])]);
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.4 } });
-      toast.success("Your week is sorted! 🎲 Tap any day to swap it.");
+      toast.success("Your week is sorted! 🎲 Tap any slot to swap.");
     } finally {
       setBusy(false);
     }
@@ -350,6 +378,8 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
     }
   }
 
+  // ── Derived ───────────────────────────────────────────────
+
   const allTags = useMemo(() => {
     const present = new Set<string>();
     for (const r of recipes) for (const t of r.tags ?? []) present.add(t);
@@ -368,7 +398,10 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
     );
   }, [recipes, leftoverSearch]);
 
-  const pickerPlan = pickerDate ? planFor(pickerDate) : undefined;
+  const pickerPlan = pickerDate ? planFor(pickerDate, pickerMealType) : undefined;
+  const pickerSlot = MEAL_SLOTS.find((s) => s.type === pickerMealType)!;
+
+  // ── JSX ───────────────────────────────────────────────────
 
   return (
     <div className="p-5 space-y-4 pb-24">
@@ -392,78 +425,106 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         </button>
       </div>
 
-      {/* 7-day grid */}
-      <div className="space-y-2">
+      {/* 7-day grid — 3 meal slots per day */}
+      <div className="space-y-3">
         {weekDates.map((date, idx) => {
-          const plan = planFor(date);
           const isToday = date === today;
-          const recipe = plan?.recipe ?? null;
-          const special = plan?.special ?? null;
-          const specialMeta = special ? SPECIAL_META[special] : null;
-          const isLeftovers = special === "leftovers";
-          const leftoverRecipe = isLeftovers ? (plan as MealPlan & { leftover_recipe?: RecipeLite }).leftover_recipe ?? null : null;
+          const hasAnyPlan = MEAL_SLOTS.some((s) => !!planFor(date, s.type));
 
           return (
-            <motion.div
+            <div
               key={date}
-              whileTap={{ scale: 0.99 }}
-              onClick={() => {
-                if (isLeftovers) {
-                  openLeftoverEditor(date);
-                } else {
-                  setPickerDate(date);
-                }
-              }}
-              className={`card p-3 flex items-center gap-3 cursor-pointer ${
-                isToday ? "border-2 border-purple-400 bg-purple-50" : !plan ? "border-2 border-dashed border-gray-200" : ""
+              className={`card p-0 overflow-hidden ${
+                isToday
+                  ? "border-2 border-purple-400"
+                  : !hasAnyPlan
+                  ? "border-2 border-dashed border-gray-200"
+                  : ""
               }`}
             >
-              <div className="text-center w-14 shrink-0">
-                <div className={`text-[10px] font-bold uppercase tracking-wide ${isToday ? "text-purple-600" : "text-gray-400"}`}>
-                  {DAY_NAMES[idx].slice(0, 3)}
-                  {isToday && " · Today"}
-                </div>
-                <div className="text-lg font-display font-black leading-tight">{formatDate(date)}</div>
+              {/* Day header */}
+              <div className={`px-4 py-2 flex items-center gap-2 border-b border-gray-100 ${isToday ? "bg-purple-50" : "bg-gray-50/60"}`}>
+                <span className={`text-[11px] font-black uppercase tracking-wider ${isToday ? "text-purple-600" : "text-gray-500"}`}>
+                  {DAY_NAMES[idx]}
+                </span>
+                <span className="text-xs text-gray-400">{formatDate(date)}</span>
+                {isToday && (
+                  <span className="ml-auto text-[10px] font-bold text-purple-500 bg-purple-100 px-2 py-0.5 rounded-full">
+                    Today
+                  </span>
+                )}
               </div>
 
-              {plan ? (
-                <div className="flex-1 min-w-0 flex items-center gap-2.5">
-                  <span className="text-3xl shrink-0">
-                    {recipe?.emoji ?? (isLeftovers ? "♻️" : specialMeta?.emoji)}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold truncate">
-                      {recipe?.title ?? (isLeftovers
-                        ? leftoverRecipe ? `Leftovers: ${leftoverRecipe.title}` : "Leftovers"
-                        : specialMeta?.label)}
+              {/* Meal slot rows */}
+              <div className="divide-y divide-gray-50">
+                {MEAL_SLOTS.map((slot) => {
+                  const plan = planFor(date, slot.type);
+                  const recipe = plan?.recipe ?? null;
+                  const special = plan?.special ?? null;
+                  const specialMeta = special ? SPECIAL_META[special] : null;
+                  const isLeftovers = special === "leftovers";
+                  const leftoverRecipePlan = isLeftovers
+                    ? (plan as MealPlan & { leftover_recipe?: RecipeLite }).leftover_recipe ?? null
+                    : null;
+
+                  return (
+                    <div
+                      key={slot.type}
+                      onClick={() => {
+                        if (isLeftovers) {
+                          openLeftoverEditor(date, slot.type);
+                        } else {
+                          openPicker(date, slot.type);
+                        }
+                      }}
+                      className="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer active:bg-gray-50 transition-colors"
+                    >
+                      {/* Slot icon */}
+                      <span className="text-sm w-5 shrink-0 text-center">{slot.emoji}</span>
+
+                      {plan ? (
+                        <>
+                          <span className="text-lg shrink-0">
+                            {recipe?.emoji ?? (isLeftovers ? "♻️" : specialMeta?.emoji)}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm truncate leading-tight">
+                              {recipe?.title ??
+                                (isLeftovers
+                                  ? leftoverRecipePlan
+                                    ? `Leftovers: ${leftoverRecipePlan.title}`
+                                    : "Leftovers"
+                                  : specialMeta?.label)}
+                            </div>
+                            {recipe ? (
+                              <div className="text-[10px] text-gray-400 mt-0.5">⏱ {totalTime(recipe)} min · 👥 {plan.servings}</div>
+                            ) : isLeftovers ? (
+                              <div className="text-[10px] text-teal-500 mt-0.5">
+                                ♻️ No shopping needed
+                                {(plan.leftover_extra_ingredients?.length ?? 0) > 0
+                                  ? ` · ${plan.leftover_extra_ingredients!.length} extra used`
+                                  : ""}
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-gray-400 mt-0.5">Not cooking</div>
+                            )}
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeMeal(plan.id); }}
+                            className="text-gray-300 hover:text-red-400 transition-colors text-xl leading-none shrink-0 px-1"
+                            aria-label="Remove meal"
+                          >
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400 flex-1">+ Add {slot.label.toLowerCase()}</span>
+                      )}
                     </div>
-                    {recipe ? (
-                      <div className="text-xs text-gray-400">
-                        ⏱ {totalTime(recipe)} min · 👥 {plan.servings}
-                      </div>
-                    ) : isLeftovers ? (
-                      <div className="text-xs text-teal-500 font-medium">
-                        ♻️ No shopping needed{(plan.leftover_extra_ingredients?.length ?? 0) > 0 ? ` · ${plan.leftover_extra_ingredients!.length} extra used` : ""}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-400">Not cooking tonight</div>
-                    )}
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeMeal(plan.id); }}
-                    className="text-gray-300 hover:text-red-400 transition-colors p-1 text-xl shrink-0"
-                    aria-label="Remove meal"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-between text-gray-400 font-semibold">
-                  <span>Tap to plan this day</span>
-                  <span className="text-purple-300 text-xl">+</span>
-                </div>
-              )}
-            </motion.div>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </div>
@@ -488,17 +549,19 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
             >
               <div className="sticky top-0 bg-white pt-4 px-5 pb-3 z-10">
                 <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-                <h2 className="text-xl font-display font-black">{dayLabel(pickerDate)}'s plan</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{formatDate(pickerDate)} · what's the move?</p>
+                <h2 className="text-xl font-display font-black">
+                  {pickerSlot.emoji} {dayLabel(pickerDate)}'s {pickerSlot.label}
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5">{formatDate(pickerDate)} · what's the plan?</p>
               </div>
 
               <div className="px-5 pb-8 space-y-4">
-                {/* Not cooking / other options — 2×2 grid */}
+                {/* Not cooking / other options */}
                 <div className="grid grid-cols-2 gap-2">
                   {SPECIAL_MEALS.map((opt) => (
                     <button
                       key={opt.value}
-                      onClick={() => selectSpecial(pickerDate, opt.value)}
+                      onClick={() => selectSpecial(pickerDate, pickerMealType, opt.value)}
                       className="card p-3 text-center active:scale-95 transition-transform"
                     >
                       <div className="text-2xl">{opt.emoji}</div>
@@ -524,7 +587,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                   onChange={(e) => setSearch(e.target.value)}
                 />
 
-                {/* Tag filter */}
+                {/* Tag filter chips */}
                 {allTags.length > 0 && (
                   <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
                     <button
@@ -554,7 +617,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                   {filteredRecipes.map((recipe) => (
                     <button
                       key={recipe.id}
-                      onClick={() => selectRecipe(pickerDate, recipe)}
+                      onClick={() => selectRecipe(pickerDate, pickerMealType, recipe)}
                       className="card p-3 flex items-center gap-3 w-full text-left active:scale-98 transition-transform"
                     >
                       <span className="text-2xl shrink-0">{recipe.emoji}</span>
@@ -608,13 +671,11 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                 <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
                 <h2 className="text-xl font-display font-black">♻️ Log leftovers</h2>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {dayLabel(leftoverDate)} · which recipe and any extras?
+                  {dayLabel(leftoverDate)} {MEAL_SLOTS.find((s) => s.type === leftoverMealType)?.label} · which recipe and any extras?
                 </p>
               </div>
 
               <div className="p-5 space-y-5">
-
-                {/* Which recipe was it? */}
                 <div>
                   <h3 className="font-bold text-sm text-gray-600 mb-2">Which recipe's leftovers?</h3>
                   <input
@@ -641,10 +702,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                     ))}
                   </div>
                   {leftoverRecipeId && (
-                    <button
-                      onClick={() => setLeftoverRecipeId(null)}
-                      className="text-xs text-gray-400 underline mt-1"
-                    >
+                    <button onClick={() => setLeftoverRecipeId(null)} className="text-xs text-gray-400 underline mt-1">
                       Clear selection
                     </button>
                   )}
@@ -652,12 +710,9 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
                 <div className="h-px bg-gray-100" />
 
-                {/* Extra ingredients used */}
                 <div>
                   <h3 className="font-bold text-sm text-gray-600 mb-1">Extra ingredients used</h3>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Anything you added on the side — will be deducted from your pantry.
-                  </p>
+                  <p className="text-xs text-gray-400 mb-3">Anything you added on the side — will be deducted from your pantry.</p>
 
                   {leftoverExtras.length > 0 && (
                     <div className="space-y-2 mb-3">
@@ -680,19 +735,13 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                               onClick={() => removeExtra(i)}
                               className="text-gray-300 hover:text-red-400 text-2xl leading-none px-1"
                               aria-label="Remove"
-                            >
-                              ×
-                            </button>
+                            >×</button>
                           </div>
                           <div className="flex items-center gap-2">
                             <input
-                              type="number"
-                              step="any"
-                              min="0"
+                              type="number" step="any" min="0"
                               value={ing.quantity ?? ""}
-                              onChange={(e) =>
-                                updateExtra(i, { quantity: e.target.value === "" ? null : parseFloat(e.target.value) })
-                              }
+                              onChange={(e) => updateExtra(i, { quantity: e.target.value === "" ? null : parseFloat(e.target.value) })}
                               placeholder="Qty"
                               className="input flex-1"
                             />
@@ -702,9 +751,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                               className="input flex-1"
                             >
                               <option value="">No unit</option>
-                              {UNITS.map((u) => (
-                                <option key={u} value={u}>{u}</option>
-                              ))}
+                              {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                             </select>
                           </div>
                         </div>
@@ -712,15 +759,11 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                     </div>
                   )}
 
-                  <button
-                    onClick={addExtra}
-                    className="w-full py-2.5 rounded-2xl font-bold text-purple-600 bg-purple-50"
-                  >
+                  <button onClick={addExtra} className="w-full py-2.5 rounded-2xl font-bold text-purple-600 bg-purple-50">
                     + Add extra ingredient
                   </button>
                 </div>
 
-                {/* Save / cancel */}
                 <button
                   onClick={saveLeftoverMeal}
                   disabled={savingLeftover}
@@ -731,10 +774,9 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
                 <button onClick={closeLeftoverEditor} className="w-full py-2 text-sm text-gray-400 underline">
                   Cancel
                 </button>
-
-                {planFor(leftoverDate)?.special === "leftovers" && (
+                {planFor(leftoverDate, leftoverMealType)?.special === "leftovers" && (
                   <button
-                    onClick={() => { removeMeal(planFor(leftoverDate)!.id); closeLeftoverEditor(); }}
+                    onClick={() => { removeMeal(planFor(leftoverDate, leftoverMealType)!.id); closeLeftoverEditor(); }}
                     className="w-full py-2 text-sm text-red-400 font-semibold"
                   >
                     🗑️ Remove this meal
