@@ -32,6 +32,7 @@ interface Props {
   recipes: RecipeLite[];
   ownedIngredients: PantryItem[];
   familyId: string;
+  initialActiveSlots: string[];
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -98,12 +99,32 @@ function recipesForSlot(recipes: RecipeLite[], slot: MealSlot): RecipeLite[] {
 const MEAL_PLAN_SELECT =
   "*, recipe:recipes!meal_plan_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
 
-export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId }: Props) {
+export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId, initialActiveSlots }: Props) {
   const supabase = createClient();
   const router = useRouter();
   const [plans, setPlans] = useState<MealPlan[]>(initialMealPlans);
   const [pantry, setPantry] = useState<PantryItem[]>(ownedIngredients);
   const [showRandomizeOptions, setShowRandomizeOptions] = useState(false);
+
+  // Which meal slots are active — stored on the family row so all devices stay in sync
+  const [activeSlots, setActiveSlots] = useState<Set<MealSlot>>(
+    () => new Set<MealSlot>((initialActiveSlots as MealSlot[]).filter(Boolean))
+  );
+
+  async function toggleSlot(slot: MealSlot) {
+    setActiveSlots((prev) => {
+      if (prev.has(slot) && prev.size === 1) return prev; // keep at least one active
+      const next = new Set(prev);
+      next.has(slot) ? next.delete(slot) : next.add(slot);
+      // Persist to Supabase so all family devices see the change
+      supabase
+        .from("families")
+        .update({ active_meal_slots: [...next] })
+        .eq("id", familyId)
+        .then(({ error }) => { if (error) toast.error("Couldn't save slot preference"); });
+      return next;
+    });
+  }
 
   // Picker state
   const [pickerDate, setPickerDate] = useState<string | null>(null);
@@ -143,6 +164,23 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
             const removedId = (payload.old as { id: string }).id;
             setPlans((prev) => prev.filter((p) => p.id !== removedId));
           }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyId]);
+
+  // Sync slot preference changes from other family members' devices
+  useEffect(() => {
+    const channel = supabase
+      .channel(`family_slots_${familyId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "families", filter: `id=eq.${familyId}` },
+        (payload) => {
+          const slots = (payload.new as { active_meal_slots?: string[] }).active_meal_slots;
+          if (slots) setActiveSlots(new Set<MealSlot>(slots as MealSlot[]));
         }
       )
       .subscribe();
@@ -333,7 +371,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
     setShowRandomizeOptions(false);
 
     const emptySlots = weekDates.flatMap((date) =>
-      MEAL_SLOTS.filter((s) => !planFor(date, s.type)).map((s) => ({ date, slot: s }))
+      MEAL_SLOTS.filter((s) => activeSlots.has(s.type) && !planFor(date, s.type)).map((s) => ({ date, slot: s }))
     );
     if (emptySlots.length === 0) { toast("Your whole week is already sorted! 🎉"); return; }
 
@@ -467,6 +505,23 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         <p className="text-sm text-gray-500 mt-0.5">Anyone in the family can plan, swap, or change a day</p>
       </div>
 
+      {/* Slot toggles */}
+      <div className="flex gap-2">
+        {MEAL_SLOTS.map((slot) => (
+          <button
+            key={slot.type}
+            onClick={() => toggleSlot(slot.type)}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeSlots.has(slot.type)
+                ? "bg-purple-100 text-purple-700 border-2 border-purple-200"
+                : "bg-gray-100 text-gray-400 border-2 border-transparent"
+            }`}
+          >
+            {slot.emoji} {slot.label}
+          </button>
+        ))}
+      </div>
+
       {/* Randomize / clear */}
       <div className="flex gap-2">
         <button
@@ -514,7 +569,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
               {/* Meal slot rows */}
               <div className="divide-y divide-gray-50">
-                {MEAL_SLOTS.map((slot) => {
+                {MEAL_SLOTS.filter((s) => activeSlots.has(s.type)).map((slot) => {
                   const plan = planFor(date, slot.type);
                   const recipe = plan?.recipe ?? null;
                   const special = plan?.special ?? null;
