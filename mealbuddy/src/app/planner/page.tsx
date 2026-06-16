@@ -6,7 +6,7 @@ import PlannerClient from "./PlannerClient";
 const RECIPE_FIELDS =
   "id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags";
 
-const MEAL_PLAN_SELECT = `*, recipe:recipes(${RECIPE_FIELDS}), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(${RECIPE_FIELDS})`;
+const MEAL_PLAN_SELECT = `*, recipe:recipes!meal_plan_recipe_id_fkey(${RECIPE_FIELDS}), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(${RECIPE_FIELDS})`;
 
 // Returns the ISO (YYYY-MM-DD) dates for this Monday through Sunday
 function getWeekDates(): string[] {
@@ -42,7 +42,7 @@ export default async function PlannerPage() {
 
   const weekDates = getWeekDates();
 
-  const [{ data: mealPlans }, { data: recipes }, { data: ingredients }] = await Promise.all([
+  const [{ data: mealPlans }, { data: recipes }, { data: ingredients }, { data: family }, { count: memberCount }] = await Promise.all([
     supabase
       .from("meal_plan")
       .select(MEAL_PLAN_SELECT)
@@ -58,7 +58,23 @@ export default async function PlannerPage() {
       .from("ingredients")
       .select("id, name, quantity, unit, secondary_quantity, secondary_unit")
       .eq("family_id", profile.family_id),
+    supabase
+      .from("families")
+      .select("active_meal_slots")
+      .eq("id", profile.family_id)
+      .single(),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("family_id", profile.family_id),
   ]);
+
+  const activeSlots: string[] =
+    Array.isArray((family as any)?.active_meal_slots) && (family as any).active_meal_slots.length > 0
+      ? (family as any).active_meal_slots
+      : ["breakfast", "lunch", "dinner"];
+
+  const familySize = Math.max(1, memberCount ?? 2);
 
   return (
     <PlannerClient
@@ -67,6 +83,8 @@ export default async function PlannerPage() {
       recipes={recipes ?? []}
       ownedIngredients={ingredients ?? []}
       familyId={profile.family_id}
+      initialActiveSlots={activeSlots}
+      familySize={familySize}
     />
   );
 }

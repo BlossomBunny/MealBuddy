@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
@@ -31,6 +32,8 @@ interface Props {
   recipes: RecipeLite[];
   ownedIngredients: PantryItem[];
   familyId: string;
+  initialActiveSlots: string[];
+  familySize: number;
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -84,22 +87,45 @@ function recipesForSlot(recipes: RecipeLite[], slot: MealSlot): RecipeLite[] {
   if (slot === "lunch") {
     return recipes.filter((r) => (r.tags ?? []).includes("lunch"));
   }
-  // dinner: exclude recipes that are tagged breakfast or lunch but NOT dinner
+  // dinner: exclude desserts, breakfast-only, and lunch-only recipes
   return recipes.filter((r) => {
     const tags = r.tags ?? [];
-    const isBreakfastOnly = tags.includes("breakfast") && !tags.includes("dinner") && !tags.includes("lunch");
-    const isLunchOnly = tags.includes("lunch") && !tags.includes("dinner") && !tags.includes("breakfast");
-    return !isBreakfastOnly && !isLunchOnly;
+    if (tags.includes("dessert")) return false;
+    if (tags.includes("breakfast") && !tags.includes("dinner")) return false;
+    if (tags.includes("lunch") && !tags.includes("dinner")) return false;
+    return true;
   });
 }
 
 const MEAL_PLAN_SELECT =
-  "*, recipe:recipes(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
+  "*, recipe:recipes!meal_plan_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
 
-export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId }: Props) {
+export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId, initialActiveSlots, familySize }: Props) {
   const supabase = createClient();
+  const router = useRouter();
   const [plans, setPlans] = useState<MealPlan[]>(initialMealPlans);
   const [pantry, setPantry] = useState<PantryItem[]>(ownedIngredients);
+  const [showRandomizeOptions, setShowRandomizeOptions] = useState(false);
+
+  // Which meal slots are active — stored on the family row so all devices stay in sync
+  const [activeSlots, setActiveSlots] = useState<Set<MealSlot>>(
+    () => new Set<MealSlot>((initialActiveSlots as MealSlot[]).filter(Boolean))
+  );
+
+  async function toggleSlot(slot: MealSlot) {
+    setActiveSlots((prev) => {
+      if (prev.has(slot) && prev.size === 1) return prev; // keep at least one active
+      const next = new Set(prev);
+      next.has(slot) ? next.delete(slot) : next.add(slot);
+      // Persist to Supabase so all family devices see the change
+      supabase
+        .from("families")
+        .update({ active_meal_slots: [...next] })
+        .eq("id", familyId)
+        .then(({ error }) => { if (error) toast.error("Couldn't save slot preference"); });
+      return next;
+    });
+  }
 
   // Picker state
   const [pickerDate, setPickerDate] = useState<string | null>(null);
@@ -139,6 +165,23 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
             const removedId = (payload.old as { id: string }).id;
             setPlans((prev) => prev.filter((p) => p.id !== removedId));
           }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyId]);
+
+  // Sync slot preference changes from other family members' devices
+  useEffect(() => {
+    const channel = supabase
+      .channel(`family_slots_${familyId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "families", filter: `id=eq.${familyId}` },
+        (payload) => {
+          const slots = (payload.new as { active_meal_slots?: string[] }).active_meal_slots;
+          if (slots) setActiveSlots(new Set<MealSlot>(slots as MealSlot[]));
         }
       )
       .subscribe();
@@ -307,7 +350,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
       const ok = await setMeal(leftoverDate, leftoverMealType, {
         recipe_id: null,
         special: "leftovers",
-        servings: 2,
+        servings: familySize,
         leftover_recipe_id: leftoverRecipeId ?? null,
         leftover_extra_ingredients: cleaned,
       });
@@ -325,39 +368,90 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
   // ── Week controls ─────────────────────────────────────────
 
-  async function randomizeWeek() {
-    // Fill each empty slot with a slot-appropriate recipe
+  async function randomizeWeek(mode: "any" | "have") {
+    setShowRandomizeOptions(false);
+
     const emptySlots = weekDates.flatMap((date) =>
-      MEAL_SLOTS.filter((s) => !planFor(date, s.type)).map((s) => ({ date, slot: s }))
+      MEAL_SLOTS.filter((s) => activeSlots.has(s.type) && !planFor(date, s.type)).map((s) => ({ date, slot: s }))
     );
     if (emptySlots.length === 0) { toast("Your whole week is already sorted! 🎉"); return; }
 
     setBusy(true);
     try {
-      const rows = emptySlots.map(({ date, slot }) => {
-        const pool = recipesForSlot(recipes, slot.type);
-        if (pool.length === 0) return null;
-        const recipe = pool[Math.floor(Math.random() * pool.length)];
-        return {
-          family_id: familyId,
-          planned_for: date,
-          meal_type: slot.type as "breakfast" | "lunch" | "dinner",
-          recipe_id: recipe.id,
-          special: null,
-          servings: 2,
-        };
-      }).filter(Boolean) as {
-        family_id: string; planned_for: string; meal_type: "breakfast" | "lunch" | "dinner";
-        recipe_id: string; special: null; servings: number;
-      }[];
+      // For "use what I have" mode — fetch ingredient lists and find cookable recipes
+      let cookableIds: Set<string> | null = null;
+      if (mode === "have") {
+        const allIds = recipes.map((r) => r.id);
+        const { data: recipeIngs } = await supabase
+          .from("recipe_ingredients")
+          .select("recipe_id, name")
+          .in("recipe_id", allIds);
 
-      if (rows.length === 0) { toast.error("No recipes found for some slots"); return; }
+        if (recipeIngs) {
+          const ownedNames = pantry.map((p) => p.name.toLowerCase());
+          cookableIds = new Set(
+            recipes
+              .filter((recipe) => {
+                const needed = recipeIngs
+                  .filter((i) => i.recipe_id === recipe.id)
+                  .map((i) => (i.name as string).toLowerCase());
+                return needed.every(
+                  (n) =>
+                    n === "water" ||
+                    ownedNames.some((o) => o.includes(n) || n.includes(o))
+                );
+              })
+              .map((r) => r.id)
+          );
+        }
+      }
+
+      const rows = emptySlots
+        .map(({ date, slot }) => {
+          let pool = recipesForSlot(recipes, slot.type);
+          if (cookableIds) pool = pool.filter((r) => cookableIds!.has(r.id));
+          if (pool.length === 0) return null;
+          const recipe = pool[Math.floor(Math.random() * pool.length)];
+          return {
+            family_id: familyId,
+            planned_for: date,
+            meal_type: slot.type as "breakfast" | "lunch" | "dinner",
+            recipe_id: recipe.id,
+            special: null as null,
+            servings: familySize,
+          };
+        })
+        .filter(Boolean) as {
+          family_id: string;
+          planned_for: string;
+          meal_type: "breakfast" | "lunch" | "dinner";
+          recipe_id: string;
+          special: null;
+          servings: number;
+        }[];
+
+      if (rows.length === 0) {
+        toast.error(
+          mode === "have"
+            ? "Not enough ingredients for any meals — add more to your pantry first!"
+            : "No recipes found for some slots"
+        );
+        return;
+      }
 
       const { data, error } = await supabase.from("meal_plan").insert(rows).select(MEAL_PLAN_SELECT);
       if (error) { toast.error(error.message || "Couldn't randomize the week"); return; }
       setPlans((prev) => [...prev, ...((data ?? []) as unknown as MealPlan[])]);
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.4 } });
-      toast.success("Your week is sorted! 🎲 Tap any slot to swap.");
+
+      if (mode === "any") {
+        const skipped = emptySlots.length - rows.length;
+        toast.success(`Week sorted! Building your shopping list 🛒${skipped > 0 ? ` (${skipped} slot${skipped !== 1 ? "s" : ""} skipped)` : ""}`);
+        setTimeout(() => router.push("/shopping?autoGenerate=true"), 1500);
+      } else {
+        const skipped = emptySlots.length - rows.length;
+        toast.success(`Week sorted with what you have! 🥬${skipped > 0 ? ` (${skipped} slot${skipped !== 1 ? "s" : ""} skipped — not enough ingredients)` : ""}`);
+      }
     } finally {
       setBusy(false);
     }
@@ -387,10 +481,12 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
   }, [recipes]);
 
   const filteredRecipes = useMemo(() => {
-    return recipes
-      .filter((r) => (activeTag ? (r.tags ?? []).includes(activeTag) : true))
-      .filter((r) => (search ? r.title.toLowerCase().includes(search.toLowerCase()) : true));
-  }, [recipes, activeTag, search]);
+    // Use slot-appropriate pool as base; tag chips refine on top of that
+    const pool = activeTag
+      ? recipes.filter((r) => (r.tags ?? []).includes(activeTag))
+      : recipesForSlot(recipes, pickerMealType);
+    return search ? pool.filter((r) => r.title.toLowerCase().includes(search.toLowerCase())) : pool;
+  }, [recipes, activeTag, search, pickerMealType]);
 
   const leftoverFilteredRecipes = useMemo(() => {
     return recipes.filter((r) =>
@@ -410,10 +506,27 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         <p className="text-sm text-gray-500 mt-0.5">Anyone in the family can plan, swap, or change a day</p>
       </div>
 
+      {/* Slot toggles */}
+      <div className="flex gap-2">
+        {MEAL_SLOTS.map((slot) => (
+          <button
+            key={slot.type}
+            onClick={() => toggleSlot(slot.type)}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeSlots.has(slot.type)
+                ? "bg-purple-100 text-purple-700 border-2 border-purple-200"
+                : "bg-gray-100 text-gray-400 border-2 border-transparent"
+            }`}
+          >
+            {slot.emoji} {slot.label}
+          </button>
+        ))}
+      </div>
+
       {/* Randomize / clear */}
       <div className="flex gap-2">
         <button
-          onClick={randomizeWeek}
+          onClick={() => setShowRandomizeOptions(true)}
           disabled={busy}
           className="flex-1 py-3 rounded-2xl font-display font-black text-white shadow-lg active:scale-98 transition-transform disabled:opacity-60"
           style={{ background: "linear-gradient(135deg, #9333ea, #14b8a6)" }}
@@ -457,7 +570,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
               {/* Meal slot rows */}
               <div className="divide-y divide-gray-50">
-                {MEAL_SLOTS.map((slot) => {
+                {MEAL_SLOTS.filter((s) => activeSlots.has(s.type)).map((slot) => {
                   const plan = planFor(date, slot.type);
                   const recipe = plan?.recipe ?? null;
                   const special = plan?.special ?? null;
@@ -528,6 +641,73 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
           );
         })}
       </div>
+
+      {/* Randomize options sheet */}
+      <AnimatePresence>
+        {showRandomizeOptions && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-40"
+              onClick={() => setShowRandomizeOptions(false)}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-50 pb-safe"
+            >
+              <div className="pt-4 px-5 pb-6">
+                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+                <h2 className="text-xl font-display font-black mb-1">🎲 Randomize my week</h2>
+                <p className="text-sm text-gray-500 mb-5">How do you want to fill the empty slots?</p>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={() => randomizeWeek("any")}
+                    className="w-full card p-4 text-left active:scale-98 transition-transform border-2 border-transparent hover:border-purple-200"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🎲</span>
+                      <div>
+                        <div className="font-black text-sm">Any recipes</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          Fill the week at random, then head to your shopping list so you can grab what's missing.
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => randomizeWeek("have")}
+                    className="w-full card p-4 text-left active:scale-98 transition-transform border-2 border-transparent hover:border-teal-200"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🥬</span>
+                      <div>
+                        <div className="font-black text-sm">Only what I have</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          Only plan meals where your pantry already has the ingredients — no shopping needed.
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowRandomizeOptions(false)}
+                  className="w-full mt-4 py-2 text-sm text-gray-400 font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Recipe picker bottom sheet */}
       <AnimatePresence>
