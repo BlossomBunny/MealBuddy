@@ -73,7 +73,7 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
 
   const unchecked = items.filter((i) => !i.checked);
   const checked = items.filter((i) => i.checked);
-  const plannedMeals = useMemo(() => mealPlans.filter((p) => p.recipe), [mealPlans]);
+  const plannedMeals = useMemo(() => mealPlans.filter((p) => p.recipe || p.special === "leftovers"), [mealPlans]);
 
   // Live-sync the shopping list across devices/family members
   useEffect(() => {
@@ -226,6 +226,21 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
       const aggregated = new Map<string, Agg>();
 
       for (const plan of plannedMeals) {
+        // Leftover meals: only add any extra ingredients they used, not the full recipe
+        if (plan.special === "leftovers") {
+          for (const ing of plan.leftover_extra_ingredients ?? []) {
+            if (normalize(ing.name).includes("water")) continue;
+            const key = `${normalize(ing.name)}|${normalize(ing.unit ?? "")}`;
+            const existing = aggregated.get(key);
+            if (existing) {
+              if (ing.quantity != null) existing.quantity = (existing.quantity ?? 0) + ing.quantity;
+            } else {
+              aggregated.set(key, { name: ing.name, emoji: (ing as any).emoji || "🛒", quantity: ing.quantity, unit: ing.unit ?? null });
+            }
+          }
+          continue;
+        }
+
         const recipe = plan.recipe!;
         const ratio = recipe.servings ? plan.servings / recipe.servings : 1;
         for (const ing of recipe.ingredients ?? []) {
@@ -294,7 +309,7 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
         <div>
           <div className="font-bold text-sm leading-tight">From this week&apos;s plan</div>
           <div className="text-xs text-gray-400 mt-0.5">
-            {plannedMeals.length} meal{plannedMeals.length === 1 ? "" : "s"} planned
+            {plannedMeals.filter((p) => p.recipe).length} recipe{plannedMeals.filter((p) => p.recipe).length === 1 ? "" : "s"} + {plannedMeals.filter((p) => p.special === "leftovers").length} leftover day{plannedMeals.filter((p) => p.special === "leftovers").length === 1 ? "" : "s"} planned
           </div>
         </div>
       </button>

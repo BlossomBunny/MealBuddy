@@ -46,11 +46,11 @@ export default async function ShoppingPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("meal_plan")
-      .select("id, planned_for, servings, special, recipe:recipes(id, title, emoji, servings, ingredients)")
+      .select("id, planned_for, servings, special, leftover_extra_ingredients, recipe:recipes(id, title, emoji, servings, ingredients)")
       .eq("family_id", profile.family_id)
       .gte("planned_for", weekDates[0])
       .lte("planned_for", weekDates[6])
-      .not("recipe_id", "is", null),
+      .or("recipe_id.not.is.null,special.eq.leftovers"),
     supabase
       .from("ingredients")
       .select("id, name, quantity, unit")
