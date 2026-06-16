@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
@@ -60,6 +61,8 @@ function inPantry(name: string, qty: number | null, unit: string | null, pantry:
 
 export default function ShoppingClient({ initialItems, mealPlans, pantryIngredients, familyId, userId }: Props) {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const autoGenerateRan = useRef(false);
   const [items, setItems] = useState<ShoppingItem[]>(initialItems);
   const [newItem, setNewItem] = useState("");
   const [newEmoji, setNewEmoji] = useState("🛒");
@@ -286,6 +289,15 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
       setBusy(null);
     }
   }
+
+  // Auto-generate when arriving from the planner with ?autoGenerate=true
+  useEffect(() => {
+    if (searchParams.get("autoGenerate") === "true" && !autoGenerateRan.current) {
+      autoGenerateRan.current = true;
+      generateFromMealPlan();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="p-5 space-y-4">
