@@ -6,6 +6,8 @@ import PlannerClient from "./PlannerClient";
 const RECIPE_FIELDS =
   "id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags";
 
+const MEAL_PLAN_SELECT = `*, recipe:recipes(${RECIPE_FIELDS}), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(${RECIPE_FIELDS})`;
+
 // Returns the ISO (YYYY-MM-DD) dates for this Monday through Sunday
 function getWeekDates(): string[] {
   const today = new Date();
@@ -40,10 +42,10 @@ export default async function PlannerPage() {
 
   const weekDates = getWeekDates();
 
-  const [{ data: mealPlans }, { data: recipes }] = await Promise.all([
+  const [{ data: mealPlans }, { data: recipes }, { data: ingredients }] = await Promise.all([
     supabase
       .from("meal_plan")
-      .select(`*, recipe:recipes(${RECIPE_FIELDS})`)
+      .select(MEAL_PLAN_SELECT)
       .eq("family_id", profile.family_id)
       .gte("planned_for", weekDates[0])
       .lte("planned_for", weekDates[6]),
@@ -52,13 +54,18 @@ export default async function PlannerPage() {
       .select(RECIPE_FIELDS)
       .or(`family_id.is.null,family_id.eq.${profile.family_id}`)
       .order("title"),
+    supabase
+      .from("ingredients")
+      .select("id, name, quantity, unit, secondary_quantity, secondary_unit")
+      .eq("family_id", profile.family_id),
   ]);
 
   return (
     <PlannerClient
       weekDates={weekDates}
-      initialMealPlans={mealPlans ?? []}
+      initialMealPlans={(mealPlans as any) ?? []}
       recipes={recipes ?? []}
+      ownedIngredients={ingredients ?? []}
       familyId={profile.family_id}
     />
   );
