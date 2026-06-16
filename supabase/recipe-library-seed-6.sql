@@ -120,22 +120,22 @@ false),
   {"emoji":"🌶️","name":"Soy sauce","quantity":2,"unit":"tbsp"},
   {"emoji":"🫒","name":"Sesame oil","quantity":1,"unit":"tsp"},
   {"emoji":"🧊","name":"Frozen peas","quantity":80,"unit":"g"},
-  {"emoji":"🧄","name":"Garlic","quantity":2,"unit":"pieces"},
+  {"emoji":"🧄","name":"Garlic powder","quantity":0.5,"unit":"tsp"},
   {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"}
 ]',
 '[
-  {"step":1,"description":"Slice the spring onions and mince the garlic."},
-  {"step":2,"description":"Heat oil in a wok or large frying pan over high heat. Add garlic and stir-fry for 30 seconds."},
+  {"step":1,"description":"Slice the spring onions."},
+  {"step":2,"description":"Heat oil in a wok or large frying pan over high heat. Add the garlic powder and stir for a few seconds until fragrant."},
   {"step":3,"description":"Add the peas and rice. Break up any clumps and stir-fry for 2–3 minutes until heated through."},
   {"step":4,"description":"Push everything to the side of the pan. Crack the eggs into the empty space, scramble and mix into the rice as they cook.","tip":"High heat is the secret to good fried rice — don''t be shy with the flame."},
   {"step":5,"description":"Add soy sauce and sesame oil. Toss everything together. Top with spring onions and serve."}
 ]',
 false),
 
-(null, 'Tuna & Cucumber Rice Bowl', '🐟', 'A light, protein-rich bowl that comes together in minutes with store-cupboard staples.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
+(null, 'Chicken & Cucumber Rice Bowl', '🍗', 'A light, protein-rich bowl with tender chicken and cool cucumber — ready in minutes.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
 '[
   {"emoji":"🍚","name":"Cooked rice","quantity":300,"unit":"g"},
-  {"emoji":"🐟","name":"Tinned tuna (in spring water)","quantity":160,"unit":"g"},
+  {"emoji":"🍗","name":"Cooked chicken breast","quantity":200,"unit":"g"},
   {"emoji":"🥒","name":"Cucumber","quantity":0.5,"unit":"pieces"},
   {"emoji":"🧅","name":"Spring onions","quantity":2,"unit":"pieces"},
   {"emoji":"🌶️","name":"Soy sauce","quantity":1,"unit":"tbsp"},
@@ -144,10 +144,10 @@ false),
   {"emoji":"🌿","name":"Sesame seeds (optional)","quantity":null,"unit":null}
 ]',
 '[
-  {"step":1,"description":"Dice the cucumber and slice the spring onions."},
-  {"step":2,"description":"Drain the tuna and flake into a bowl. Mix in the soy sauce, sesame oil and lemon juice."},
-  {"step":3,"description":"Divide the rice between two bowls. Top with tuna, cucumber and spring onions."},
-  {"step":4,"description":"Scatter sesame seeds over the top if using. Serve at room temperature or cold."}
+  {"step":1,"description":"Slice or shred the cooked chicken. Dice the cucumber and slice the spring onions."},
+  {"step":2,"description":"Mix together the soy sauce, sesame oil and lemon juice in a small bowl to make the dressing."},
+  {"step":3,"description":"Divide the rice between two bowls. Top with chicken, cucumber and spring onions."},
+  {"step":4,"description":"Drizzle the dressing over each bowl. Scatter sesame seeds over the top if using. Serve at room temperature or cold."}
 ]',
 false),
 
@@ -168,39 +168,38 @@ false),
 ]',
 false),
 
-(null, 'Tomato & Egg Bagel', '🥯', 'A satisfying bagel with scrambled egg and fresh tomato — great for breakfast or lunch.', 5, 5, 2, 'easy', array['breakfast','lunch','quick'],
+(null, 'Spinach & Mushroom Egg Bagel', '🥯', 'Fluffy scrambled eggs with wilted spinach and mushrooms piled into a toasted bagel.', 5, 8, 2, 'easy', array['breakfast','lunch','quick'],
 '[
   {"emoji":"🥯","name":"Bagels","quantity":2,"unit":"pieces"},
   {"emoji":"🥚","name":"Eggs","quantity":4,"unit":"pieces"},
-  {"emoji":"🍅","name":"Tomatoes","quantity":2,"unit":"pieces"},
-  {"emoji":"🧈","name":"Butter","quantity":10,"unit":"g"},
-  {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null},
-  {"emoji":"🥬","name":"Rocket or lettuce (optional)","quantity":null,"unit":null}
+  {"emoji":"🍄","name":"Mushrooms","quantity":100,"unit":"g"},
+  {"emoji":"🥬","name":"Spinach","quantity":60,"unit":"g"},
+  {"emoji":"🧈","name":"Butter","quantity":15,"unit":"g"},
+  {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null}
 ]',
 '[
-  {"step":1,"description":"Slice the tomatoes. Halve and toast the bagels."},
-  {"step":2,"description":"Beat the eggs with a pinch of salt and pepper."},
-  {"step":3,"description":"Melt butter in a small pan over low heat. Add eggs and stir gently until just set but still creamy.","tip":"Low and slow makes the best scrambled eggs — take them off the heat while still slightly runny."},
-  {"step":4,"description":"Pile scrambled egg onto the bagel bottoms. Top with sliced tomato and rocket if using. Add the bagel tops and serve."}
+  {"step":1,"description":"Halve and toast the bagels."},
+  {"step":2,"description":"Slice the mushrooms. Melt half the butter in a frying pan over medium heat and fry the mushrooms for 3–4 minutes until golden. Add the spinach and stir until just wilted. Season and set aside."},
+  {"step":3,"description":"Beat the eggs with a pinch of salt and pepper. Melt the remaining butter in the pan over low heat. Add eggs and stir gently until just set but still creamy.","tip":"Low and slow makes the best scrambled eggs — take them off the heat while still slightly runny."},
+  {"step":4,"description":"Pile the scrambled egg onto the bagel bottoms. Top with the mushroom and spinach mixture. Add the bagel tops and serve."}
 ]',
 false),
 
-(null, 'Simple Chicken Salad', '🥗', 'Leftover or rotisserie chicken tossed with crisp salad in a light dressing.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
+(null, 'Simple Chicken Salad', '🥗', 'Leftover or rotisserie chicken tossed with crisp salad and peppers in a light dressing.', 10, 0, 2, 'easy', array['lunch','healthy','no-cook'],
 '[
   {"emoji":"🍗","name":"Cooked chicken breast","quantity":250,"unit":"g"},
   {"emoji":"🥬","name":"Mixed salad leaves","quantity":80,"unit":"g"},
   {"emoji":"🥒","name":"Cucumber","quantity":0.5,"unit":"pieces"},
-  {"emoji":"🍅","name":"Cherry tomatoes","quantity":100,"unit":"g"},
-  {"emoji":"🧅","name":"Red onion","quantity":0.5,"unit":"pieces"},
+  {"emoji":"🫑","name":"Mixed peppers","quantity":1,"unit":"pieces"},
   {"emoji":"🍋","name":"Lemon juice","quantity":2,"unit":"tbsp"},
   {"emoji":"🫒","name":"Olive oil","quantity":2,"unit":"tbsp"},
   {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null}
 ]',
 '[
   {"step":1,"description":"Shred or slice the cooked chicken."},
-  {"step":2,"description":"Halve the cherry tomatoes. Dice the cucumber. Thinly slice the red onion."},
+  {"step":2,"description":"Dice the cucumber. Thinly slice the peppers."},
   {"step":3,"description":"Whisk the lemon juice and olive oil together with a pinch of salt and pepper."},
-  {"step":4,"description":"Toss the salad leaves, cucumber, tomatoes and onion together. Add the chicken on top."},
+  {"step":4,"description":"Toss the salad leaves, cucumber and peppers together. Add the chicken on top."},
   {"step":5,"description":"Drizzle over the dressing and serve straight away."}
 ]',
 false);
