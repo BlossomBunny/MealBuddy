@@ -6,7 +6,7 @@ import PlannerClient from "./PlannerClient";
 const RECIPE_FIELDS =
   "id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags";
 
-const MEAL_PLAN_SELECT = `*, recipe:recipes(${RECIPE_FIELDS}), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(${RECIPE_FIELDS})`;
+const MEAL_PLAN_SELECT = `*, recipe:recipes!meal_plan_recipe_id_fkey(${RECIPE_FIELDS}), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(${RECIPE_FIELDS})`;
 
 // Returns the ISO (YYYY-MM-DD) dates for this Monday through Sunday
 function getWeekDates(): string[] {
@@ -66,7 +66,9 @@ export default async function PlannerPage() {
   ]);
 
   const activeSlots: string[] =
-    (family as any)?.active_meal_slots ?? ["breakfast", "lunch", "dinner"];
+    Array.isArray((family as any)?.active_meal_slots) && (family as any).active_meal_slots.length > 0
+      ? (family as any).active_meal_slots
+      : ["breakfast", "lunch", "dinner"];
 
   return (
     <PlannerClient
