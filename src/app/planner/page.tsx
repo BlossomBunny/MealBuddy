@@ -42,7 +42,7 @@ export default async function PlannerPage() {
 
   const weekDates = getWeekDates();
 
-  const [{ data: mealPlans }, { data: recipes }, { data: ingredients }, { data: family }] = await Promise.all([
+  const [{ data: mealPlans }, { data: recipes }, { data: ingredients }, { data: family }, { count: memberCount }] = await Promise.all([
     supabase
       .from("meal_plan")
       .select(MEAL_PLAN_SELECT)
@@ -63,12 +63,18 @@ export default async function PlannerPage() {
       .select("active_meal_slots")
       .eq("id", profile.family_id)
       .single(),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("family_id", profile.family_id),
   ]);
 
   const activeSlots: string[] =
     Array.isArray((family as any)?.active_meal_slots) && (family as any).active_meal_slots.length > 0
       ? (family as any).active_meal_slots
       : ["breakfast", "lunch", "dinner"];
+
+  const familySize = Math.max(1, memberCount ?? 2);
 
   return (
     <PlannerClient
@@ -78,6 +84,7 @@ export default async function PlannerPage() {
       ownedIngredients={ingredients ?? []}
       familyId={profile.family_id}
       initialActiveSlots={activeSlots}
+      familySize={familySize}
     />
   );
 }

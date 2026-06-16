@@ -33,6 +33,7 @@ interface Props {
   ownedIngredients: PantryItem[];
   familyId: string;
   initialActiveSlots: string[];
+  familySize: number;
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -99,7 +100,7 @@ function recipesForSlot(recipes: RecipeLite[], slot: MealSlot): RecipeLite[] {
 const MEAL_PLAN_SELECT =
   "*, recipe:recipes!meal_plan_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
 
-export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId, initialActiveSlots }: Props) {
+export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId, initialActiveSlots, familySize }: Props) {
   const supabase = createClient();
   const router = useRouter();
   const [plans, setPlans] = useState<MealPlan[]>(initialMealPlans);
@@ -349,7 +350,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
       const ok = await setMeal(leftoverDate, leftoverMealType, {
         recipe_id: null,
         special: "leftovers",
-        servings: 2,
+        servings: familySize,
         leftover_recipe_id: leftoverRecipeId ?? null,
         leftover_extra_ingredients: cleaned,
       });
@@ -417,7 +418,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
             meal_type: slot.type as "breakfast" | "lunch" | "dinner",
             recipe_id: recipe.id,
             special: null as null,
-            servings: 2,
+            servings: familySize,
           };
         })
         .filter(Boolean) as {
