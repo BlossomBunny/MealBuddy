@@ -407,8 +407,8 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
 
       if (mode === "any") {
         const skipped = emptySlots.length - rows.length;
-        toast.success(`Week sorted! Heading to your shopping list 🛒${skipped > 0 ? ` (${skipped} slot${skipped !== 1 ? "s" : ""} skipped)` : ""}`);
-        setTimeout(() => router.push("/shopping"), 1500);
+        toast.success(`Week sorted! Building your shopping list 🛒${skipped > 0 ? ` (${skipped} slot${skipped !== 1 ? "s" : ""} skipped)` : ""}`);
+        setTimeout(() => router.push("/shopping?autoGenerate=true"), 1500);
       } else {
         const skipped = emptySlots.length - rows.length;
         toast.success(`Week sorted with what you have! 🥬${skipped > 0 ? ` (${skipped} slot${skipped !== 1 ? "s" : ""} skipped — not enough ingredients)` : ""}`);
