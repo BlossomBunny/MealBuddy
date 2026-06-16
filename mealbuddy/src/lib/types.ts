@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
-export type SpecialMeal = "takeaway" | "eating_out" | "microwave";
+export type SpecialMeal = "takeaway" | "eating_out" | "microwave" | "leftovers";
 export type Difficulty = "easy" | "medium" | "hard";
 export type IngredientCategory =
   | "produce"
@@ -96,8 +96,11 @@ export interface MealPlan {
   cooked: boolean;
   cooked_at: string | null;
   special: SpecialMeal | null;
+  leftover_recipe_id: string | null;
+  leftover_extra_ingredients: RecipeIngredient[] | null;
   created_at: string;
   recipe?: RecipeLite | null;
+  leftover_recipe?: RecipeLite | null;
 }
 
 export interface ShoppingItem {
@@ -134,6 +137,7 @@ export interface PlannedMealForShopping {
   planned_for: string;
   servings: number;
   special: SpecialMeal | null;
+  leftover_extra_ingredients?: RecipeIngredient[] | null;
   recipe: Pick<Recipe, "id" | "title" | "emoji" | "servings" | "ingredients"> | null;
 }
 
@@ -162,6 +166,7 @@ export const SPECIAL_MEALS: {
   { value: "takeaway", label: "Takeaway", emoji: "🥡" },
   { value: "eating_out", label: "Eating Out", emoji: "🍽️" },
   { value: "microwave", label: "Microwave Meal", emoji: "🍱" },
+  { value: "leftovers", label: "Leftovers", emoji: "♻️" },
 ];
 
 // Units offered when adding/editing an ingredient's quantity
