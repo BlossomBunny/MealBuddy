@@ -115,15 +115,16 @@ false),
   {"emoji":"🧊","name":"Frozen peas","quantity":80,"unit":"g"},
   {"emoji":"🫑","name":"Mixed peppers","quantity":0.5,"unit":"pieces"},
   {"emoji":"🧄","name":"Garlic powder","quantity":0.5,"unit":"tsp"},
-  {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"},
-  {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null}
+  {"emoji":"🌶️","name":"Soy sauce","quantity":2,"unit":"tbsp"},
+  {"emoji":"🫒","name":"Sesame oil","quantity":1,"unit":"tsp"},
+  {"emoji":"🫒","name":"Vegetable oil","quantity":1,"unit":"tbsp"}
 ]',
 '[
   {"step":1,"description":"Dice the peppers."},
-  {"step":2,"description":"Heat oil in a wok or large frying pan over high heat. Add garlic powder and stir for a few seconds until fragrant."},
+  {"step":2,"description":"Heat vegetable oil in a wok or large frying pan over high heat. Add garlic powder and stir for a few seconds until fragrant."},
   {"step":3,"description":"Add the peppers and peas. Stir-fry for 2 minutes, then add the rice. Break up any clumps and stir-fry for 2–3 minutes until heated through."},
   {"step":4,"description":"Push everything to the side. Crack the eggs into the empty space, scramble, then mix into the rice as they cook.","tip":"High heat is the secret to good fried rice — don''t be shy with the flame."},
-  {"step":5,"description":"Season with salt and pepper. Toss everything together and serve."}
+  {"step":5,"description":"Add soy sauce and sesame oil. Toss everything together and serve."}
 ]',
 false),
 
@@ -132,15 +133,15 @@ false),
   {"emoji":"🍚","name":"Cooked rice","quantity":300,"unit":"g"},
   {"emoji":"🍗","name":"Cooked chicken breast","quantity":200,"unit":"g"},
   {"emoji":"🥒","name":"Cucumber","quantity":0.5,"unit":"pieces"},
+  {"emoji":"🌶️","name":"Soy sauce","quantity":1,"unit":"tbsp"},
+  {"emoji":"🫒","name":"Sesame oil","quantity":1,"unit":"tsp"},
   {"emoji":"🍋","name":"Lemon juice","quantity":1,"unit":"tbsp"},
-  {"emoji":"🫒","name":"Olive oil","quantity":1,"unit":"tbsp"},
   {"emoji":"🧄","name":"Garlic powder","quantity":0.25,"unit":"tsp"},
-  {"emoji":"🧂","name":"Salt and pepper","quantity":null,"unit":null},
   {"emoji":"🌿","name":"Sesame seeds (optional)","quantity":null,"unit":null}
 ]',
 '[
   {"step":1,"description":"Slice or shred the cooked chicken. Dice the cucumber."},
-  {"step":2,"description":"Mix the lemon juice, olive oil, garlic powder and a pinch of salt and pepper together to make a simple dressing."},
+  {"step":2,"description":"Mix the soy sauce, sesame oil, lemon juice and garlic powder together to make the dressing."},
   {"step":3,"description":"Divide the rice between two bowls. Top with chicken and cucumber."},
   {"step":4,"description":"Drizzle the dressing over each bowl. Scatter sesame seeds if using. Serve at room temperature or cold."}
 ]',
