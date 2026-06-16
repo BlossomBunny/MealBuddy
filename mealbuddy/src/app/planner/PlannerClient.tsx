@@ -120,7 +120,7 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
       // Persist to Supabase so all family devices see the change
       supabase
         .from("families")
-        .update({ active_meal_slots: [...next] })
+        .update({ active_meal_slots: Array.from(next) })
         .eq("id", familyId)
         .then(({ error }) => { if (error) toast.error("Couldn't save slot preference"); });
       return next;
