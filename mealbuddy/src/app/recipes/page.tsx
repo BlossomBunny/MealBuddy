@@ -17,7 +17,7 @@ export default async function RecipesPage() {
 
   if (!profile?.family_id) redirect("/family");
 
-  const [{ data: recipes }, { data: ingredients }] = await Promise.all([
+  const [{ data: recipes }, { data: ingredients }, { count: memberCount }] = await Promise.all([
     supabase
       .from("recipes")
       .select("*")
@@ -27,7 +27,13 @@ export default async function RecipesPage() {
       .from("ingredients")
       .select("id, name, quantity, unit, secondary_quantity, secondary_unit")
       .eq("family_id", profile.family_id),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("family_id", profile.family_id),
   ]);
+
+  const familySize = Math.max(1, memberCount ?? 2);
 
   return (
     <RecipesClient
@@ -36,6 +42,7 @@ export default async function RecipesPage() {
       ownedIngredients={ingredients ?? []}
       familyId={profile.family_id}
       userId={user.id}
+      familySize={familySize}
     />
   );
 }

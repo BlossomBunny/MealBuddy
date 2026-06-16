@@ -24,6 +24,7 @@ interface Props {
   ownedIngredients: PantryItem[];
   familyId: string;
   userId: string;
+  familySize: number;
 }
 
 function isOwned(name: string, owned: string[]): boolean {
@@ -107,7 +108,7 @@ function formatQty(n: number): string {
   return `${rounded}`;
 }
 
-export default function RecipesClient({ initialRecipes, ownedIngredientNames, ownedIngredients, familyId, userId }: Props) {
+export default function RecipesClient({ initialRecipes, ownedIngredientNames, ownedIngredients, familyId, userId, familySize }: Props) {
   const supabase = createClient();
   const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
   const [pantry, setPantry] = useState<PantryItem[]>(ownedIngredients);
@@ -121,14 +122,14 @@ export default function RecipesClient({ initialRecipes, ownedIngredientNames, ow
   const [editingIngredients, setEditingIngredients] = useState<RecipeIngredient[] | null>(null);
   const [savingIngredients, setSavingIngredients] = useState(false);
   const [surpriseRecipe, setSurpriseRecipe] = useState<Recipe | null>(null);
-  const [targetServings, setTargetServings] = useState(4);
+  const [targetServings, setTargetServings] = useState(familySize);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [addingToList, setAddingToList] = useState(false);
 
   function openRecipe(recipe: Recipe) {
     setSelectedRecipe(recipe);
     setCookingStep(null);
-    setTargetServings(recipe.servings || 4);
+    setTargetServings(familySize);
   }
 
   // Curated set of "main" categories for the filter row — cuisines & dish types only,
