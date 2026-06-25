@@ -42,7 +42,7 @@ export default async function PlannerPage() {
 
   const weekDates = getWeekDates();
 
-  const [{ data: mealPlans }, { data: recipes }, { data: ingredients }, { data: family }, { count: memberCount }] = await Promise.all([
+  const [{ data: mealPlans }, { data: recipes }, { data: ingredients }, { data: family }, { count: memberCount }, { data: recipePrefs }] = await Promise.all([
     supabase
       .from("meal_plan")
       .select(MEAL_PLAN_SELECT)
@@ -67,6 +67,11 @@ export default async function PlannerPage() {
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("family_id", profile.family_id),
+    supabase
+      .from("family_recipe_prefs")
+      .select("recipe_id")
+      .eq("family_id", profile.family_id)
+      .eq("hidden", true),
   ]);
 
   const activeSlots: string[] =
@@ -75,6 +80,8 @@ export default async function PlannerPage() {
       : ["breakfast", "lunch", "dinner"];
 
   const familySize = Math.max(1, memberCount ?? 2);
+
+  const hiddenRecipeIds = (recipePrefs ?? []).map((p: { recipe_id: string }) => p.recipe_id);
 
   return (
     <PlannerClient
@@ -85,6 +92,7 @@ export default async function PlannerPage() {
       familyId={profile.family_id}
       initialActiveSlots={activeSlots}
       familySize={familySize}
+      hiddenRecipeIds={hiddenRecipeIds}
     />
   );
 }
