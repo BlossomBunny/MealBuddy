@@ -34,6 +34,7 @@ interface Props {
   familyId: string;
   initialActiveSlots: string[];
   familySize: number;
+  hiddenRecipeIds: string[];
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -100,7 +101,7 @@ function recipesForSlot(recipes: RecipeLite[], slot: MealSlot): RecipeLite[] {
 const MEAL_PLAN_SELECT =
   "*, recipe:recipes!meal_plan_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags), leftover_recipe:recipes!meal_plan_leftover_recipe_id_fkey(id, title, emoji, description, prep_time_mins, cook_time_mins, servings, difficulty, tags)";
 
-export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId, initialActiveSlots, familySize }: Props) {
+export default function PlannerClient({ weekDates, initialMealPlans, recipes, ownedIngredients, familyId, initialActiveSlots, familySize, hiddenRecipeIds }: Props) {
   const supabase = createClient();
   const router = useRouter();
   const [plans, setPlans] = useState<MealPlan[]>(initialMealPlans);
@@ -406,9 +407,10 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
         }
       }
 
+      const hiddenSet = new Set(hiddenRecipeIds);
       const rows = emptySlots
         .map(({ date, slot }) => {
-          let pool = recipesForSlot(recipes, slot.type);
+          let pool = recipesForSlot(recipes, slot.type).filter((r) => !hiddenSet.has(r.id));
           if (cookableIds) pool = pool.filter((r) => cookableIds!.has(r.id));
           if (pool.length === 0) return null;
           const recipe = pool[Math.floor(Math.random() * pool.length)];
@@ -458,14 +460,19 @@ export default function PlannerClient({ weekDates, initialMealPlans, recipes, ow
   }
 
   async function clearWeek() {
-    const ids = plans.filter((p) => weekDates.includes(p.planned_for)).map((p) => p.id);
-    if (ids.length === 0) return;
+    const hasPlans = plans.some((p) => weekDates.includes(p.planned_for));
+    if (!hasPlans) return;
     if (!window.confirm("Clear the whole week's plan?")) return;
     setBusy(true);
     try {
-      const { error } = await supabase.from("meal_plan").delete().in("id", ids);
+      const { error } = await supabase
+        .from("meal_plan")
+        .delete()
+        .eq("family_id", familyId)
+        .gte("planned_for", weekDates[0])
+        .lte("planned_for", weekDates[6]);
       if (error) { toast.error(error.message || "Couldn't clear the week"); return; }
-      setPlans((prev) => prev.filter((p) => !ids.includes(p.id)));
+      setPlans((prev) => prev.filter((p) => !weekDates.includes(p.planned_for)));
       toast("Week cleared 🧹", { icon: "🧹" });
     } finally {
       setBusy(false);
