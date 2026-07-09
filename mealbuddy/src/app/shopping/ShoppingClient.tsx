@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import type { ShoppingItem, PlannedMealForShopping, IngredientCategory } from "@/lib/types";
-import { CATEGORIES } from "@/lib/types";
+import { CATEGORIES, isStaple, cleanIngredientName } from "@/lib/types";
 
 interface PantryIngredient {
   id: string;
@@ -199,6 +199,11 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
     setLoading(null);
   }
 
+  async function deleteItem(id: string) {
+    await supabase.from("shopping_items").delete().eq("id", id);
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  }
+
   async function deleteChecked() {
     const ids = checked.map((i) => i.id);
     await supabase.from("shopping_items").delete().in("id", ids);
@@ -233,12 +238,13 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
         if (plan.special === "leftovers") {
           for (const ing of plan.leftover_extra_ingredients ?? []) {
             if (normalize(ing.name).includes("water")) continue;
-            const key = `${normalize(ing.name)}|${normalize(ing.unit ?? "")}`;
+            const cleanName = cleanIngredientName(ing.name);
+            const key = `${normalize(cleanName)}|${normalize(ing.unit ?? "")}`;
             const existing = aggregated.get(key);
             if (existing) {
               if (ing.quantity != null) existing.quantity = (existing.quantity ?? 0) + ing.quantity;
             } else {
-              aggregated.set(key, { name: ing.name, emoji: (ing as any).emoji || "🛒", quantity: ing.quantity, unit: ing.unit ?? null });
+              aggregated.set(key, { name: cleanName, emoji: (ing as any).emoji || "🛒", quantity: ing.quantity, unit: ing.unit ?? null });
             }
           }
           continue;
@@ -249,13 +255,14 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
         for (const ing of recipe.ingredients ?? []) {
           // Water is always available — never add it to the shopping list
           if (normalize(ing.name).includes("water")) continue;
-          const key = `${normalize(ing.name)}|${normalize(ing.unit ?? "")}`;
+          const cleanName = cleanIngredientName(ing.name);
+          const key = `${normalize(cleanName)}|${normalize(ing.unit ?? "")}`;
           const scaledQty = ing.quantity != null ? Math.round(ing.quantity * ratio * 100) / 100 : null;
           const existing = aggregated.get(key);
           if (existing) {
             if (scaledQty != null) existing.quantity = (existing.quantity ?? 0) + scaledQty;
           } else {
-            aggregated.set(key, { name: ing.name, emoji: ing.emoji || "🛒", quantity: scaledQty, unit: ing.unit ?? null });
+            aggregated.set(key, { name: cleanName, emoji: ing.emoji || "🛒", quantity: scaledQty, unit: ing.unit ?? null });
           }
         }
       }
@@ -277,8 +284,9 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
         name: ing.name,
         emoji: ing.emoji,
         category: "other" as IngredientCategory,
-        quantity: ing.quantity,
-        unit: ing.unit,
+        // Staples (salt, pepper, oil, spices…) — just flag as needed, no quantity
+        quantity: isStaple(ing.name) ? null : ing.quantity,
+        unit: isStaple(ing.name) ? null : ing.unit,
       }));
 
       const { data, error } = await supabase.from("shopping_items").insert(rows).select();
@@ -482,6 +490,13 @@ export default function ShoppingClient({ initialItems, mealPlans, pantryIngredie
                     {item.quantity && (
                       <span className="text-sm text-gray-400">{item.quantity} {item.unit}</span>
                     )}
+                    <button
+                      onClick={() => deleteItem(item.id)}
+                      className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none flex-shrink-0 px-1"
+                      aria-label="Remove item"
+                    >
+                      ×
+                    </button>
                   </motion.div>
                 ))}
               </AnimatePresence>
