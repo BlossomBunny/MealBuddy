@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import type { Recipe, RecipeIngredient, IngredientCategory } from "@/lib/types";
-import { UNITS } from "@/lib/types";
+import { UNITS, isStaple, cleanIngredientName } from "@/lib/types";
 import confetti from "canvas-confetti";
 
 // Slim shape of a pantry ingredient, used to deduct stock after cooking
@@ -133,7 +133,8 @@ export default function RecipesClient({
   );
 
   const [viewMode, setViewMode] = useState<"meals" | "desserts">("meals");
-  const [filter, setFilter] = useState<"all" | "can-make">("all");
+  const [filter, setFilter] = useState<"all" | "can-make" | "by-ingredients">("all");
+  const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(new Set());
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [cookingStep, setCookingStep] = useState<number | null>(null);
   const [showRating, setShowRating] = useState(false);
@@ -234,6 +235,14 @@ export default function RecipesClient({
     .filter((r) => !getPref(r.id).hidden)
     .filter((r) => viewMode === "desserts" ? isDessert(r) : !isDessert(r))
     .filter((r) => filter === "can-make" ? getMatch(r, ownedIngredientNames, getPref(r.id).excluded_ingredients).canMake : true)
+    .filter((r) => {
+      if (filter !== "by-ingredients" || selectedIngredients.size === 0) return true;
+      const ingNames = r.ingredients.map((i) => i.name.toLowerCase());
+      // Show recipe if it uses at least one of the selected ingredients
+      return Array.from(selectedIngredients).some((sel) =>
+        ingNames.some((n) => n.includes(sel) || sel.includes(n))
+      );
+    })
     .filter((r) => activeTag ? (r.tags ?? []).includes(activeTag) : true);
 
   // Surprise Me: only non-hidden, non-dessert meals (meals pool)
@@ -270,11 +279,12 @@ export default function RecipesClient({
       const rows = toAdd.map((ing) => ({
         family_id: familyId,
         added_by: userId,
-        name: ing.name,
+        name: cleanIngredientName(ing.name),
         emoji: ing.emoji || "🛒",
         category: categorize(ing.emoji),
-        quantity: ing.quantity != null ? Math.round(ing.quantity * scale * 100) / 100 : null,
-        unit: ing.unit || null,
+        // Staples (salt, oil, spices…) — no quantity, just flag as needed
+        quantity: isStaple(ing.name) ? null : (ing.quantity != null ? Math.round(ing.quantity * scale * 100) / 100 : null),
+        unit: isStaple(ing.name) ? null : (ing.unit || null),
         recipe_id: selectedRecipe.id,
       }));
       const { error } = await supabase.from("shopping_items").insert(rows);
@@ -316,7 +326,7 @@ export default function RecipesClient({
       pantryUpdateIngredients.forEach((ing, i) => {
         const amt = parseFloat(usedAmounts[i]);
         if (!amt || amt <= 0) return;
-        const match = findPantryMatch(ing.name, pantry);
+        const match = findPantryMatch(cleanIngredientName(ing.name), pantry);
         if (!match) return;
         const unit = ing.unit || "";
         if (unitsMatch(match.unit, unit)) {
@@ -440,13 +450,16 @@ export default function RecipesClient({
         </button>
       )}
 
-      {/* Can-make filter */}
+      {/* Filter tabs */}
       <div className="flex gap-2">
-        {([["all", "🍽️ All recipes"], ["can-make", "✅ I can make"]] as const).map(([v, label]) => (
+        {([["all", "🍽️ All"], ["can-make", "✅ I can make"], ["by-ingredients", "🥕 By ingredient"]] as const).map(([v, label]) => (
           <button
             key={v}
-            onClick={() => setFilter(v)}
-            className={`flex-1 py-2 rounded-xl font-bold text-sm transition-all ${
+            onClick={() => {
+              setFilter(v);
+              if (v !== "by-ingredients") setSelectedIngredients(new Set());
+            }}
+            className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all ${
               filter === v ? "bg-purple-600 text-white" : "bg-white text-gray-500 border-2 border-gray-100"
             }`}
           >
@@ -454,6 +467,49 @@ export default function RecipesClient({
           </button>
         ))}
       </div>
+
+      {/* Ingredient picker — shown when "By ingredient" filter is active */}
+      {filter === "by-ingredients" && (
+        <div>
+          <p className="text-xs text-gray-400 mb-2">Tap ingredients you have — see recipes that use them:</p>
+          <div className="flex flex-wrap gap-2">
+            {ownedIngredients.map((ing) => {
+              const sel = selectedIngredients.has(ing.name.toLowerCase());
+              return (
+                <button
+                  key={ing.id}
+                  onClick={() => setSelectedIngredients((prev) => {
+                    const next = new Set(prev);
+                    sel ? next.delete(ing.name.toLowerCase()) : next.add(ing.name.toLowerCase());
+                    return next;
+                  })}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    sel
+                      ? "bg-purple-600 text-white"
+                      : "bg-white border-2 border-gray-200 text-gray-600"
+                  }`}
+                >
+                  {ing.name}
+                  {sel && <span className="text-purple-200">✓</span>}
+                </button>
+              );
+            })}
+            {selectedIngredients.size > 0 && (
+              <button
+                onClick={() => setSelectedIngredients(new Set())}
+                className="px-3 py-1.5 rounded-full text-xs text-gray-400 border-2 border-dashed border-gray-200"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {selectedIngredients.size > 0 && (
+            <p className="text-xs text-purple-600 font-semibold mt-2">
+              {filtered.length} recipe{filtered.length !== 1 ? "s" : ""} use {selectedIngredients.size > 1 ? "these ingredients" : "this ingredient"}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Category / tag filter — only in meals view */}
       {viewMode === "meals" && allTags.length > 0 && (
