@@ -242,6 +242,55 @@ export const CATEGORIES: {
   { value: "other", label: "Other", emoji: "🛒" },
 ];
 
+// ─────────────────────────────────────────
+// Ingredient substitutes
+// ─────────────────────────────────────────
+
+export interface Substitute {
+  ingredient: string;   // what the recipe calls for
+  substitute: string;   // what you have instead
+}
+
+/** Default substitute pairs that get auto-seeded for every family. */
+export const DEFAULT_SUBSTITUTES: Substitute[] = [
+  // Plant-based protein swaps
+  { ingredient: "chicken breast",  substitute: "plant-based chicken" },
+  { ingredient: "chicken thigh",   substitute: "plant-based chicken" },
+  { ingredient: "chicken",         substitute: "plant-based chicken" },
+  { ingredient: "beef mince",      substitute: "plant-based mince" },
+  { ingredient: "pork mince",      substitute: "plant-based mince" },
+  { ingredient: "minced beef",     substitute: "plant-based mince" },
+  { ingredient: "ground beef",     substitute: "plant-based mince" },
+  // Sweetener swaps
+  { ingredient: "honey",           substitute: "golden syrup" },
+  { ingredient: "honey",           substitute: "maple syrup" },
+  { ingredient: "maple syrup",     substitute: "golden syrup" },
+  // Dairy swaps
+  { ingredient: "butter",          substitute: "coconut oil" },
+  { ingredient: "butter",          substitute: "olive oil" },
+  { ingredient: "milk",            substitute: "oat milk" },
+  { ingredient: "milk",            substitute: "almond milk" },
+  { ingredient: "milk",            substitute: "soy milk" },
+  { ingredient: "cream",           substitute: "coconut cream" },
+  { ingredient: "heavy cream",     substitute: "coconut cream" },
+  // Flour / starch
+  { ingredient: "plain flour",     substitute: "gluten-free flour" },
+  { ingredient: "flour",           substitute: "gluten-free flour" },
+  { ingredient: "cornstarch",      substitute: "cornflour" },
+  { ingredient: "cornflour",       substitute: "cornstarch" },
+  // Sauce swaps
+  { ingredient: "soy sauce",       substitute: "tamari" },
+  { ingredient: "fish sauce",      substitute: "soy sauce" },
+  { ingredient: "oyster sauce",    substitute: "hoisin sauce" },
+  // Other
+  { ingredient: "lemon juice",     substitute: "lime juice" },
+  { ingredient: "lime juice",      substitute: "lemon juice" },
+  { ingredient: "spring onion",    substitute: "chives" },
+  { ingredient: "scallion",        substitute: "spring onion" },
+  { ingredient: "coriander",       substitute: "parsley" },
+  { ingredient: "cilantro",        substitute: "parsley" },
+];
+
 // Common emoji suggestions per category (used by Add Ingredient form
 // and as a fallback when guessing an emoji for a scanned product)
 export const EMOJI_SUGGESTIONS: Record<IngredientCategory, string[]> = {
