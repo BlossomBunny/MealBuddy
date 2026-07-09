@@ -188,6 +188,46 @@ export const UNITS = [
   "box",
 ];
 
+// ─────────────────────────────────────────
+// Staple ingredients — spices, seasonings, oils, etc.
+// These are binary: you either have them or you don't.
+// Quantities are meaningless for pantry staples.
+// ─────────────────────────────────────────
+export const STAPLE_KEYWORDS = [
+  "salt", "pepper", "oil", "butter", "vinegar",
+  "soy sauce", "fish sauce", "worcestershire", "oyster sauce", "hot sauce", "sriracha",
+  "flour", "sugar", "brown sugar", "icing sugar", "baking powder", "baking soda",
+  "cornstarch", "cornflour", "cocoa",
+  "thyme", "oregano", "basil", "rosemary", "sage", "parsley", "cilantro", "coriander",
+  "cumin", "paprika", "chilli", "chili", "cayenne", "turmeric", "ginger powder",
+  "garlic powder", "onion powder", "cinnamon", "nutmeg", "cloves", "bay leaves",
+  "bay leaf", "sesame seeds", "mixed herbs", "dried herbs", "stock cube",
+  "mustard", "honey", "maple syrup", "tahini", "miso", "sesame oil", "olive oil",
+  "vegetable oil", "sunflower oil", "coconut oil", "cooking spray",
+  "stock", "broth",
+];
+
+export function isStaple(name: string): boolean {
+  const lower = name.toLowerCase().trim();
+  return STAPLE_KEYWORDS.some((k) => lower.includes(k));
+}
+
+// Strip preparation instructions from ingredient names so they're clean for
+// shopping lists and pantry storage.
+// "carrots (peeled and diced small)"  →  "carrots"
+// "chicken breast, sliced"            →  "chicken breast"
+// "plant-based chicken pieces (shredded)" → "plant-based chicken pieces"
+const PREP_SUFFIX_RE =
+  /,\s*(peeled|diced|sliced|chopped|minced|grated|shredded|crushed|trimmed|halved|quartered|cubed|coarsely|finely|thinly|roughly|softened|melted|dried|rinsed|drained|cooked|blended|beaten|whisked|sifted).*/i;
+
+export function cleanIngredientName(name: string): string {
+  return name
+    .replace(/\s*\([^)]*\)/g, "")   // remove (anything in parentheses)
+    .replace(PREP_SUFFIX_RE, "")     // remove ", chopped" style suffixes
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 export const CATEGORIES: {
   value: IngredientCategory;
   label: string;
