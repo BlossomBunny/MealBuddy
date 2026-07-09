@@ -17,7 +17,7 @@ export default async function RecipesPage() {
 
   if (!profile?.family_id) redirect("/family");
 
-  const [{ data: recipes }, { data: ingredients }, { count: memberCount }] = await Promise.all([
+  const [{ data: recipes }, { data: ingredients }, { count: memberCount }, { data: prefs }] = await Promise.all([
     supabase
       .from("recipes")
       .select("*")
@@ -31,6 +31,10 @@ export default async function RecipesPage() {
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("family_id", profile.family_id),
+    supabase
+      .from("family_recipe_prefs")
+      .select("recipe_id, favourited, hidden, excluded_ingredients")
+      .eq("family_id", profile.family_id),
   ]);
 
   const familySize = Math.max(1, memberCount ?? 2);
@@ -43,6 +47,7 @@ export default async function RecipesPage() {
       familyId={profile.family_id}
       userId={user.id}
       familySize={familySize}
+      initialPrefs={prefs ?? []}
     />
   );
 }
