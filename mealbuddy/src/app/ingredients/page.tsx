@@ -17,16 +17,24 @@ export default async function IngredientsPage() {
 
   if (!profile?.family_id) redirect("/family");
 
-  const { data: ingredients } = await supabase
-    .from("ingredients")
-    .select("*")
-    .eq("family_id", profile.family_id)
-    .order("category")
-    .order("name");
+  const [{ data: ingredients }, { data: substitutes }] = await Promise.all([
+    supabase
+      .from("ingredients")
+      .select("*")
+      .eq("family_id", profile.family_id)
+      .order("category")
+      .order("name"),
+    supabase
+      .from("family_substitutes")
+      .select("id, ingredient, substitute")
+      .eq("family_id", profile.family_id)
+      .order("ingredient"),
+  ]);
 
   return (
     <IngredientsClient
       initialIngredients={ingredients ?? []}
+      initialSubstitutes={substitutes ?? []}
       familyId={profile.family_id}
       userId={user.id}
     />
